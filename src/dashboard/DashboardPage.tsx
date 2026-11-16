@@ -2,12 +2,14 @@ import { Layout, type SectionRef } from "../shared/Layout";
 import { Decisions } from "./sections/Decisions";
 import { Evidence } from "./sections/Evidence";
 import { Pipeline } from "./sections/Pipeline";
+import { Requirements } from "./sections/Requirements";
 import { RunStrip } from "./sections/RunStrip";
 import { Strategy } from "./sections/Strategy";
 import { Upcoming } from "./sections/Upcoming";
 
 const SECTIONS: SectionRef[] = [
   { id: "latest-run", title: "Latest pipeline run" },
+  { id: "requirements", title: "Requirements coverage" },
   { id: "evidence", title: "Skills and evidence" },
   { id: "pipeline", title: "Pipeline architecture" },
   { id: "strategy", title: "Test strategy" },
@@ -28,11 +30,12 @@ export function DashboardPage() {
         </p>
       </header>
       <RunStrip index={1} />
-      <Evidence index={2} />
-      <Pipeline index={3} />
-      <Strategy index={4} />
-      <Decisions index={5} />
-      <Upcoming index={6} />
+      <Requirements index={2} />
+      <Evidence index={3} />
+      <Pipeline index={4} />
+      <Strategy index={5} />
+      <Decisions index={6} />
+      <Upcoming index={7} />
     </Layout>
   );
 }

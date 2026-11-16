@@ -8,6 +8,10 @@ export interface Sourced<T> {
 
 export type {
   Healing,
+  Requirement,
+  RequirementsResponse,
+  RequirementState,
+  RequirementTest,
   RunCounts,
   RunDetail,
   RunStatus,

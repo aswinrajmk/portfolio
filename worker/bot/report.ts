@@ -20,6 +20,7 @@ export function formatRunReport(run: RunDetail, publicUrl: string): string {
     `Commit <code>${esc((run.commitSha ?? "").slice(0, 7) || "n/a")}</code> ${esc(run.commitMessage ?? "")}`,
     `Trigger: ${run.trigger === "deploy" ? "app deploy" : "manual"}`,
   ];
+  if (run.filter) lines.push(`Filter: <code>${esc(run.filter)}</code> (part of the suite)`);
   const failures = run.tests.filter((t) => t.status === "failed");
   if (failures.length) {
     lines.push("", "<b>Failed</b>");

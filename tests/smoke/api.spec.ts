@@ -125,3 +125,70 @@ test.describe("Results API: write (local only)", () => {
     );
   });
 });
+
+test.describe("Results API: requirements (local only)", () => {
+  test.skip(!isLocal, "Writes run only against the local server");
+  // Requirement issues come from the stub server (tests/bot/stub-server.mjs): #1 open, #2 closed.
+
+  interface Req {
+    number: number;
+    title: string;
+    url: string | null;
+    issueState: string | null;
+    state: string;
+    tests: { title: string; status: string }[];
+  }
+
+  test("links tagged tests to requirement issues and keeps each test's latest result", async ({ request }) => {
+    const auth = { Authorization: `Bearer ${localToken()}` };
+    const stamp = Date.now();
+    const orphan = 9000 + (stamp % 1000);
+    const run = async (filter?: string) => {
+      const response = await request.post("/api/runs", {
+        headers: auth,
+        data: { project: "wealthlite", trigger: "manual", targetUrl: "http://localhost:8787", filter },
+      });
+      return ((await response.json()) as { id: string }).id;
+    };
+    const result = (id: string, title: string, status: string, tags?: unknown) =>
+      request.post(`/api/runs/${id}/results`, {
+        headers: auth,
+        data: { title: `${title} ${stamp}`, file: "req.spec.ts", status, durationMs: 1, tags },
+      });
+
+    const full = await run();
+    expect((await result(full, "signs in", "passed", ["@REQ-1", "@smoke"])).status()).toBe(201);
+    expect((await result(full, "orphan check", "failed", [`@REQ-${orphan}`])).status()).toBe(201);
+    expect((await result(full, "untagged", "passed")).status()).toBe(201);
+    expect((await result(full, "bad tag", "passed", ["no-at-sign"])).status()).toBe(400);
+    await request.post(`/api/runs/${full}/finish`, { headers: auth });
+
+    const read = async () => {
+      const response = await request.get("/api/requirements");
+      expect(response.status()).toBe(200);
+      return (await response.json()) as { requirements: Req[]; issuesLoaded: boolean };
+    };
+    let body = await read();
+    expect(body.issuesLoaded).toBe(true);
+    const signIn = body.requirements.find((r) => r.number === 1);
+    expect(signIn).toMatchObject({ title: "Sign in with email and password", issueState: "open", state: "passing" });
+    expect(signIn?.tests.map((t) => t.title)).toContain(`signs in ${stamp}`);
+    expect(body.requirements.find((r) => r.number === 2)).toMatchObject({ issueState: "closed", state: "untested" });
+    expect(body.requirements.find((r) => r.number === 3)).toBeUndefined(); // a pull request, not an issue
+    expect(body.requirements.find((r) => r.number === orphan)).toMatchObject({
+      title: "",
+      url: null,
+      state: "failing",
+    });
+
+    // A filtered rerun of the orphan's test replaces its result, and the run records the filter.
+    const rerun = await run(`@REQ-${orphan}`);
+    await result(rerun, "orphan check", "passed", [`@REQ-${orphan}`]);
+    await request.post(`/api/runs/${rerun}/finish`, { headers: auth });
+    expect(((await (await request.get(`/api/runs/${rerun}`)).json()) as { filter: string }).filter).toBe(
+      `@REQ-${orphan}`,
+    );
+    body = await read();
+    expect(body.requirements.find((r) => r.number === orphan)?.state).toBe("passing");
+  });
+});

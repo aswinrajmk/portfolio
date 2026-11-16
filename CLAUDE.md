@@ -25,7 +25,7 @@ Hosted on Cloudflare Workers (static assets). No custom domain yet; use the work
 - [x] 2–4. Live demo loop (merged phases): Results API (Worker + D1) with live run reports, WealthLite app,
   qa-tests framework with rule-based self-healing and a custom reporter, triggered by every app deploy.
   R2 (traces, HTML reports) deferred; it needs a payment method on the Cloudflare account.
-- [ ] 5. Telegram bot (natural-language tools, YES confirmation for start_run)
+- [x] 5. Telegram bot (natural-language tools, YES confirmation for start_run), plus requirement-driven test drafting
 - [ ] 6. Appium + WDIO mobile run
 - [ ] 7. AI agents: failure triage, AI-assisted healing, test generation (Playwright MCP), AI Gateway cost cap
 - [ ] 8. Email Routing (needs a domain), fault-injection suite, case studies, polish
@@ -64,3 +64,21 @@ Open issues:
 - Runs left "running" for 30+ minutes show as "incomplete"; there is no cleanup job or retention policy yet.
 - QA_DISPATCH_TOKEN in wealthlite is a fine-grained PAT that expires; renew it before expiry.
 - Pipeline diagram and evidence statuses in `src/content/site.ts` now describe the demo loop.
+
+## Phase 5 summary: Telegram bot and requirements coverage (2026-11-16)
+The portfolio Worker hosts a private Telegram bot (`worker/bot/`): Claude (`claude-opus-5`) answers run
+questions with read-only tools; code changes, merges, closes and QA runs only create a pending action that
+Worker code runs after YES (MERGE ANYWAY for PRs touching CI, wrangler, migrations or package files). Code
+changes run `claude-change.yml` in the target repo (Claude Code edits; the workflow commits and opens the PR).
+Finished runs are posted to a Telegram channel with the first failure screenshot. Shortcut commands (`/latest`,
+`/runs`, `/reqs`, `/run [filter]`, `/merge`) need no AI credit.
+Requirements are wealthlite issues labelled `requirement` (#1–#4 seeded from existing behaviour). Editing one
+triggers qa-tests `requirement.yml`: Claude Code drafts `@REQ-<n>` tests, runs them against live WealthLite,
+opens a PR and reports counts to Telegram. The dashboard's requirements matrix (`GET /api/requirements`) shows
+each requirement with its linked tests' latest results. n8n was considered and rejected: it needs paid or
+self-managed hosting and duplicates GitHub Actions plus the bot.
+
+Open issues:
+- Free-form bot messages need Anthropic API credit (the owner's balance ran out on 2026-11-16).
+- Leadership specifics and impact numbers are still missing from the profile; they must come from Aswin.
+- Performance testing (k6) is not shown anywhere yet.

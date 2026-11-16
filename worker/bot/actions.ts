@@ -28,7 +28,7 @@ export async function execute(env: Env, cfg: BotConfig, action: PendingAction): 
             ? "WealthLite is deploying; the QA run report will arrive in the channel."
             : repo === "portfolio"
               ? "The portfolio site is deploying."
-              : "The change is on main and is used by the next QA run.";
+              : "The change is on main and is used by the next QA run. Send /run to run it now.";
         return `✅ Merged ${esc(repo)} PR #${number}. ${next}`;
       }
       case "close_pr": {
@@ -41,9 +41,11 @@ export async function execute(env: Env, cfg: BotConfig, action: PendingAction): 
         return `Closed ${esc(repo)} PR #${number} without merging.`;
       }
       case "start_qa_run": {
-        await gh.dispatch("qa-tests", "qa.yml", {});
-        await audit(env.DB, action.id, action.kind, "qa-tests", "dispatched");
-        return "▶️ QA run started. The report will arrive in the channel when it finishes.";
+        const filter = typeof payload.filter === "string" ? payload.filter : "";
+        // Only send the input when it is used, so the dispatch also works against a workflow without it.
+        await gh.dispatch("qa-tests", "qa.yml", filter ? { grep: filter } : {});
+        await audit(env.DB, action.id, action.kind, filter ? `qa-tests --grep ${filter}` : "qa-tests", "dispatched");
+        return `▶️ QA run started${filter ? ` (tests matching <code>${esc(filter)}</code>)` : ""}. The report will arrive in the channel when it finishes.`;
       }
     }
   } catch (e) {

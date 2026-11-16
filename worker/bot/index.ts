@@ -1,8 +1,11 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { isAuthorized, json, readJson } from "../api/http";
+import { listRequirements } from "../api/requirements";
 import { listRuns } from "../api/store";
 import { execute } from "./actions";
 import { respond } from "./agent";
-import { botConfig, type BotConfig } from "./config";
+import { botConfig, REPOS, type BotConfig, type Repo } from "./config";
+import { prepareMerge, prepareRun, type Prepared } from "./gated";
 import { GitHub, sensitiveFiles } from "./github";
 import {
   claimUpdate,
@@ -13,6 +16,7 @@ import {
   remember,
   takePending,
   updateChangeRequest,
+  type PendingAction,
 } from "./store";
 import { esc, Telegram, type InlineButton } from "./telegram";
 
@@ -33,9 +37,16 @@ const HELP = [
   "• Why did the copy test fail?",
   "• Rename the sign-in button to Log in (wealthlite)",
   "• Update the copy test to expect Log in (qa-tests)",
+  "• Which requirements are failing?",
+  "• Run the tests for requirement 3",
   "• Merge wealthlite PR 12",
   "",
-  "Shortcuts: /latest /runs /pending /reset /help",
+  "<b>Shortcuts</b> (work without AI credit):",
+  "/latest · /runs · /reqs (requirement coverage)",
+  "/run [filter], e.g. /run @REQ-3 or /run login",
+  "/merge &lt;repo&gt; &lt;number&gt;, e.g. /merge qa-tests 12",
+  "/pending · /reset · /help",
+  "",
   "Anything that changes code or starts a run asks for YES first.",
 ].join("\n");
 
@@ -119,6 +130,37 @@ async function decide(
   await reply(await execute(env, cfg, action));
 }
 
+const REQ_ICON = { passing: "✅", failing: "❌", untested: "⚪" } as const;
+
+async function sendPrepared(telegram: Telegram, chatId: string, prepared: Prepared) {
+  if (!prepared.pending) return void (await telegram.sendMessage(chatId, esc(prepared.message)));
+  await telegram.sendMessage(
+    chatId,
+    confirmText(prepared.pending, ""),
+    confirmButtons(prepared.pending.id, isSensitive(prepared.pending)),
+  );
+}
+
+const isSensitive = (p: PendingAction) =>
+  ((JSON.parse(p.payload) as { sensitive?: string[] }).sensitive ?? []).length > 0;
+
+function confirmText(p: PendingAction, lead: string) {
+  return `${lead}${lead ? "\n\n" : ""}<b>Confirm:</b> ${esc(p.summary)}${isSensitive(p) ? "\n⚠️ Changes sensitive files. Reply <b>MERGE ANYWAY</b> to merge." : ""}`;
+}
+
+/** Plain-language explanation for Anthropic API errors the owner can act on, or null for anything else. */
+function aiErrorMessage(e: unknown): string | null {
+  if (!(e instanceof Anthropic.APIError)) return null;
+  const shortcuts = "Shortcuts still work: /latest /runs /reqs /run /merge.";
+  if (e.status === 400 && /credit balance/i.test(e.message))
+    return `💳 The Anthropic API credit is too low, so I can't answer free-form messages right now. Add credit in the Anthropic Console under Billing. ${shortcuts}`;
+  if (e.status === 401)
+    return `🔑 The Anthropic API key was rejected. Run <code>npm run bot:setup</code> again with a valid key. ${shortcuts}`;
+  if (e.status === 429 || e.status === 529 || (e.status ?? 0) >= 500)
+    return `⏳ The Anthropic API is busy right now. Try again in a minute. ${shortcuts}`;
+  return null;
+}
+
 async function onText(env: Env, cfg: BotConfig, telegram: Telegram, chatId: string, text: string) {
   const upper = text.toUpperCase();
   if (upper === "YES" || upper === "Y") return decide(env, cfg, telegram, chatId, null, true);
@@ -138,6 +180,40 @@ async function onText(env: Env, cfg: BotConfig, telegram: Telegram, chatId: stri
       : "Nothing is waiting for confirmation.";
     return void (await telegram.sendMessage(chatId, body));
   }
+  const args = text.split(/\s+/).slice(1);
+  if (command === "/run") return sendPrepared(telegram, chatId, await prepareRun(env, chatId, args.join(" ")));
+  if (command === "/merge") {
+    const repo = args[0]?.toLowerCase();
+    const number = Number(args[1]);
+    if (!(REPOS as readonly string[]).includes(repo ?? "") || !Number.isInteger(number) || number < 1) {
+      return void (await telegram.sendMessage(
+        chatId,
+        `Usage: /merge &lt;repo&gt; &lt;number&gt;. Repos: ${REPOS.join(", ")}.`,
+      ));
+    }
+    return sendPrepared(telegram, chatId, await prepareMerge(env, cfg, chatId, repo as Repo, number));
+  }
+  if (command === "/reqs") {
+    const { requirements, issuesLoaded } = await listRequirements(env, "wealthlite");
+    const lines = requirements.map((q) => {
+      const failing = q.tests.filter((t) => t.status === "failed").length;
+      const detail =
+        q.state === "untested"
+          ? "no tests yet"
+          : q.state === "failing"
+            ? `${failing} of ${q.tests.length} tests failing`
+            : `${q.tests.length} tests passing`;
+      const title = q.title ? esc(q.title) : "(issue not found)";
+      const link = q.url ? `<a href="${esc(q.url)}">#${q.number}</a>` : `#${q.number}`;
+      return `${REQ_ICON[q.state]} ${link} ${title}: ${detail}${q.issueState === "closed" ? " (closed)" : ""}`;
+    });
+    const body = [
+      lines.length ? lines.join("\n") : "No requirements yet. Open a wealthlite issue with the requirement label.",
+      issuesLoaded ? "" : "\n⚠️ GitHub could not be reached, so titles may be missing.",
+      `\n<a href="${cfg.publicUrl}/dashboard/#requirements">Open the coverage matrix</a>`,
+    ].join("");
+    return void (await telegram.sendMessage(chatId, body));
+  }
   if (command === "/runs" || command === "/latest") {
     const runs = await listRuns(env.DB, "wealthlite", command === "/latest" ? 1 : 5);
     const body = runs.length
@@ -153,19 +229,31 @@ async function onText(env: Env, cfg: BotConfig, telegram: Telegram, chatId: stri
 
   await telegram.sendTyping(chatId);
   await remember(env.DB, chatId, "user", text);
-  const result = await respond(env, cfg, chatId, await history(env.DB, chatId));
+  let result;
+  try {
+    result = await respond(env, cfg, chatId, await history(env.DB, chatId));
+  } catch (e) {
+    const message = aiErrorMessage(e);
+    if (!message) throw e;
+    console.warn(`[bot] Anthropic API: ${String(e)}`);
+    return void (await telegram.sendMessage(chatId, message));
+  }
   await remember(env.DB, chatId, "assistant", result.text);
   let body = esc(result.text);
   let buttons: InlineButton[][] | undefined;
   if (result.pending) {
-    const sensitive = ((JSON.parse(result.pending.payload) as { sensitive?: string[] }).sensitive ?? []).length > 0;
-    body += `\n\n<b>Confirm:</b> ${esc(result.pending.summary)}${sensitive ? "\n⚠️ Changes sensitive files. Reply <b>MERGE ANYWAY</b> to merge." : ""}`;
-    buttons = confirmButtons(result.pending.id, sensitive);
+    body = confirmText(result.pending, body);
+    buttons = confirmButtons(result.pending.id, isSensitive(result.pending));
   }
   await telegram.sendMessage(chatId, body, buttons);
 }
 
 interface BotEvent {
+  kind?: unknown;
+  issue?: unknown;
+  title?: unknown;
+  passed?: unknown;
+  failed?: unknown;
   request_id?: unknown;
   repo?: unknown;
   status?: unknown;
@@ -183,6 +271,7 @@ export async function handleBotEvent(request: Request, env: Env): Promise<Respon
   const parsed = await readJson(request, 64 * 1024);
   if (!parsed.ok) return parsed.response;
   const event = parsed.body as BotEvent;
+  if (event.kind === "requirement") return requirementEvent(env, cfg, event);
   const requestId = typeof event.request_id === "string" ? event.request_id : "";
   const change = requestId ? await getChangeRequest(env.DB, requestId) : null;
   if (!change) return json({ error: "unknown_request" }, 404);
@@ -232,6 +321,52 @@ export async function handleBotEvent(request: Request, env: Env): Promise<Respon
       "assistant",
       `Opened ${change.repo} PR #${String(event.pr_number)} (${String(event.pr_url)}) for: ${change.instruction}`,
     );
+  }
+  return json({ ok: true });
+}
+
+/**
+ * A requirement issue changed and qa-tests drafted or updated its tests (requirement.yml in qa-tests).
+ * There is no chat request behind it, so the message goes to the owner's private chat.
+ */
+async function requirementEvent(env: Env, cfg: BotConfig, event: BotEvent): Promise<Response> {
+  const issue = typeof event.issue === "number" && Number.isInteger(event.issue) ? event.issue : null;
+  if (!issue) return json({ error: "invalid_body", message: "issue must be a number" }, 400);
+  const title = typeof event.title === "string" ? event.title.slice(0, 200) : "";
+  const summary = typeof event.summary === "string" ? event.summary.slice(0, 1500) : "";
+  const runLink = typeof event.run_url === "string" ? ` (<a href="${esc(event.run_url)}">log</a>)` : "";
+  const counts =
+    typeof event.passed === "number" && typeof event.failed === "number"
+      ? `Against live wealthlite: ${event.passed} passed · ${event.failed} failed.`
+      : "";
+  const head = `📋 <b>Requirement #${issue}</b>${title ? `: ${esc(title)}` : ""}`;
+  const telegram = new Telegram(cfg.botToken, cfg.telegramApi);
+  const chatId = cfg.allowedUserId;
+
+  if (
+    (event.status === "pr_opened" || event.status === "pr_updated") &&
+    typeof event.pr_number === "number" &&
+    typeof event.pr_url === "string"
+  ) {
+    const verb = event.status === "pr_opened" ? "Tests drafted in" : "Tests updated in";
+    const failingNote =
+      typeof event.failed === "number" && event.failed > 0
+        ? "\nFailing tests are expected until wealthlite implements the requirement."
+        : "";
+    await telegram.sendMessage(
+      chatId,
+      `${head}\n${verb} <a href="${esc(event.pr_url)}">qa-tests PR #${event.pr_number}</a>.\n${counts}${failingNote}\n\n${esc(summary)}\n\nWhen checks pass: /merge qa-tests ${event.pr_number}`,
+    );
+    await remember(
+      env.DB,
+      chatId,
+      "assistant",
+      `Requirement #${issue} (${title}): tests in qa-tests PR #${event.pr_number} (${event.pr_url}). ${counts}`,
+    );
+  } else if (event.status === "no_changes") {
+    await telegram.sendMessage(chatId, `${head}\nNo test changes were needed${runLink}. ${esc(summary)}`);
+  } else {
+    await telegram.sendMessage(chatId, `${head}\n⚠️ Drafting tests failed${runLink}. ${esc(summary)}`);
   }
   return json({ ok: true });
 }

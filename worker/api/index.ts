@@ -1,6 +1,7 @@
 import { LIMITS, validateRunFinish, validateRunStart, validateTestResult } from "../../shared/results";
 import { postRunReport } from "../bot/report";
 import { error, isAuthorized, json, readJson } from "./http";
+import { listRequirements } from "./requirements";
 import { addResult, createRun, finishRun, getRun, getScreenshot, listRuns, runState } from "./store";
 
 const ID = "[0-9a-f-]{36}";
@@ -30,6 +31,10 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
       const project = url.searchParams.get("project") ?? "wealthlite";
       const [latest] = await listRuns(env.DB, project, 1);
       return latest ? json(latest) : error(404, "no_runs", "No runs recorded yet");
+    }
+    if (path === "/api/requirements") {
+      // Only the demo app has requirement issues; the project is fixed so callers cannot point this at other repos.
+      return json(await listRequirements(env, "wealthlite"));
     }
     const runMatch = ROUTES.run.exec(path);
     if (runMatch?.[1]) {
