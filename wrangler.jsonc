@@ -20,7 +20,7 @@
     {
       "binding": "DB",
       "database_name": "portfolio-results",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "d6011246-9a5a-4d5d-8c08-06ea24322814",
       "migrations_dir": "migrations",
     },
   ],
@@ -33,7 +33,7 @@
       {
         "binding": "DB",
         "database_name": "portfolio-results-preview",
-        "database_id": "00000000-0000-0000-0000-000000000001",
+        "database_id": "6d8f72cd-7c80-4a25-a02b-c1cb3cd49306",
         "migrations_dir": "migrations",
       },
     ],

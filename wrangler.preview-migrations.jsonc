@@ -9,7 +9,7 @@
     {
       "binding": "DB",
       "database_name": "portfolio-results-preview",
-      "database_id": "00000000-0000-0000-0000-000000000001",
+      "database_id": "6d8f72cd-7c80-4a25-a02b-c1cb3cd49306",
       "migrations_dir": "migrations",
     },
   ],
