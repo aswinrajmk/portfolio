@@ -21,7 +21,7 @@ Hosted on Cloudflare Workers (static assets). No custom domain yet; use the work
 - qa-tests: Playwright + TypeScript framework (created in a later phase)
 
 ## Roadmap (tick off as completed)
-- [ ] 1. Landing page + Cloudflare hosting + CI deploy + PR previews
+- [x] 1. Landing page + Cloudflare hosting + CI deploy + PR previews
 - [ ] 2. Results API (Worker + D1 + R2) and dashboard reading real data
 - [ ] 3. Playwright + API test framework, running in CI against previews
 - [ ] 4. Custom reporter posting results to the Results API
@@ -29,3 +29,21 @@ Hosted on Cloudflare Workers (static assets). No custom domain yet; use the work
 - [ ] 6. Appium + WDIO mobile run
 - [ ] 7. AI agents: failure triage, test generation (Playwright MCP), AI Gateway cost cap
 - [ ] 8. Email Routing (needs a domain), fault-injection suite, case studies, polish
+
+## Phase 1 summary (2026-11-16)
+Built a two-page site on one Cloudflare Worker (`portfolio`, production https://portfolio.aswin-qa.workers.dev):
+`/` is the profile page built from the resume, `/dashboard/` is the QA dashboard (latest-run strip labelled
+Sample data, skills/evidence matrix, pipeline diagram, draft strategy notes and ADRs, planned AI/leadership).
+All copy lives in `src/content/site.ts`; run data comes from `src/data/` (`getLatestRun()`, source "sample").
+The Worker serves static assets, sets CSP and security headers, adds `X-Robots-Tag: noindex` when
+`ENVIRONMENT` is not "production" (set to "preview" via the `previews` block in `wrangler.jsonc`), and
+stubs `/api/*`. CI: each PR gets a Worker Preview (`wrangler preview --name pr-<n>`, URL commented on the
+PR) and a 21-test Playwright + axe smoke run against it; previews are deleted on close; pushes to `main`
+deploy production and run the same suite there. Lighthouse on the PR #1 preview: accessibility 100,
+best practices 100, performance 98–100 (warm; one cold-start mobile run scored 87).
+
+Open issues:
+- Worker Previews are in open beta; Wrangler prints progress before its `--json` output (CI parses from the first `{`).
+- `run_worker_first: true` makes every request a Worker invocation (fine within the free 100k/day).
+- Test strategy notes and the three ADRs are drafts awaiting Aswin's review; leadership content needs specifics.
+- Run data stays Sample data until phase 2 ships the Results API.
