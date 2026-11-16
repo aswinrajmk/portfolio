@@ -1,0 +1,2 @@
+# Local-only Worker variables. Copy to .dev.vars (gitignored) if you need to override anything.
+# ENVIRONMENT=preview   # uncomment to see the noindex header locally
