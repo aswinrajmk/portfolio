@@ -45,7 +45,7 @@ export function PipelineDiagram({ columns, className }: { columns: number; class
 
   return (
     <svg className={className} viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={`${id}-title ${id}-desc`}>
-      <title id={`${id}-title`}>Pipeline from pull request to dashboard and Telegram</title>
+      <title id={`${id}-title`}>Pipeline from an app change to the live report and Telegram</title>
       <desc id={`${id}-desc`}>{description}</desc>
       <defs>
         <marker id={`${id}-arrow`} viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">

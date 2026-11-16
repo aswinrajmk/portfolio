@@ -22,8 +22,9 @@ export function DashboardPage() {
         <p className="eyebrow">QA dashboard</p>
         <h1>How I work, in public</h1>
         <p className="lede">
-          This site is its own test subject. Every pull request gets its own preview deployment, and a Playwright smoke
-          suite runs against it on demand. Each item below says whether it is live or planned.
+          WealthLite is a small demo wealth app with synthetic data. Every time it deploys, a Playwright suite runs
+          against it and streams each result here as it finishes. When a locator breaks, the suite tries to heal it, and
+          always reports what it healed. Each item below says whether it is live or planned.
         </p>
       </header>
       <RunStrip index={1} />

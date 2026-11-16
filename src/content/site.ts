@@ -59,6 +59,7 @@ export interface Decision {
 }
 
 const REPO = "https://github.com/aswinrajmk/portfolio";
+const QA_REPO = "https://github.com/aswinrajmk/qa-tests";
 
 export const profile = {
   name: "Aswin Raj",
@@ -162,10 +163,15 @@ export const evidence: EvidenceSkill[] = [
   {
     name: "Playwright + TypeScript",
     atWork: "QBurst, 2023 – present",
-    status: "in-progress",
-    evidence: { label: "Smoke suite for this site", href: `${REPO}/tree/main/tests/smoke` },
+    status: "live",
+    evidence: { label: "qa-tests: suite, fixtures, self-healing", href: QA_REPO },
   },
-  { name: "API automation", atWork: "Playwright API suites, Postman", status: "planned" },
+  {
+    name: "API automation",
+    atWork: "Playwright API suites, Postman",
+    status: "in-progress",
+    evidence: { label: "API tests in qa-tests", href: `${QA_REPO}/tree/main/tests/api` },
+  },
   { name: "Appium + WebdriverIO", atWork: "Appium for iOS, WebdriverIO suites at QBurst", status: "planned" },
   {
     name: "CI/CD",
@@ -179,12 +185,12 @@ export const evidence: EvidenceSkill[] = [
 ];
 
 export const pipeline: PipelineStage[] = [
-  { id: "pr", label: "Pull request", detail: "Every change starts as a PR", status: "live" },
-  { id: "actions", label: "GitHub Actions", detail: "Lint, type-check, build", status: "live" },
-  { id: "preview", label: "Preview deploy", detail: "One Worker Preview per PR", status: "live" },
-  { id: "tests", label: "Tests", detail: "Playwright smoke, on demand", status: "live" },
-  { id: "api", label: "Results API", detail: "Worker + D1 + R2", status: "planned" },
-  { id: "dashboard", label: "Dashboard", detail: "This page, sample data", status: "in-progress" },
+  { id: "change", label: "App change", detail: "Push to WealthLite main", status: "live" },
+  { id: "deploy", label: "Deploy", detail: "GitHub Actions to Workers", status: "live" },
+  { id: "trigger", label: "Trigger", detail: "Deploy event to qa-tests", status: "live" },
+  { id: "tests", label: "QA suite", detail: "Playwright, self-healing", status: "live" },
+  { id: "api", label: "Results API", detail: "Worker + D1, per test", status: "live" },
+  { id: "dashboard", label: "Live report", detail: "This dashboard", status: "live" },
   { id: "telegram", label: "Telegram bot", detail: "Ask about runs, start a run", status: "planned" },
 ];
 
@@ -249,6 +255,7 @@ export const upcoming = {
     today:
       "At work I use Amazon Q and Microsoft Copilot for test case design, script generation, debugging and code review.",
     planned: [
+      "AI-assisted healing for cases the rule-based healer cannot resolve (today it uses test ids and text similarity)",
       "A triage agent that groups failed tests and suggests likely causes",
       "Test generation with the Playwright MCP server, reviewed before merge",
       "A spending cap on model calls through Cloudflare AI Gateway",

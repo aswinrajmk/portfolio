@@ -56,7 +56,9 @@ test.describe("QA dashboard", () => {
   });
 
   test("renders the pipeline diagram with an accessible name", async ({ page }) => {
-    await expect(page.getByRole("img", { name: "Pipeline from pull request to dashboard and Telegram" })).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "Pipeline from an app change to the live report and Telegram" }),
+    ).toBeVisible();
   });
 
   for (const colorScheme of ["light", "dark"] as const) {
