@@ -1,0 +1,88 @@
+/* Design tokens. Light: warm paper and ink. Dark: deep slate green. One ledger-green accent. */
+:root {
+  color-scheme: light;
+  --bg: #f4f1e8;
+  --surface: #fbf9f3;
+  --surface-sunk: #ece8dc;
+  --ink: #1b2420;
+  --ink-2: #47514c;
+  --muted: #5d6662;
+  --rule: #d6d0c1;
+  --rule-strong: #b9b2a1;
+  --accent: #1d6a4e;
+  --accent-ink: #f4f1e8;
+  --accent-soft: #dcebe2;
+  --live: #1d6a4e;
+  --progress: #8a5a00;
+  --progress-soft: #f4e6c8;
+  --planned: #626a66;
+  --danger: #a33a2c;
+  --focus: #1b5fb4;
+
+  --font-serif: "Newsreader Variable", "Iowan Old Style", "Georgia", serif;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --step--1: 0.8125rem;
+  --step-0: 1rem;
+  --step-1: 1.1875rem;
+  --step-2: 1.5rem;
+  --step-3: clamp(1.75rem, 1.4rem + 1.4vw, 2.25rem);
+  --step-4: clamp(2.5rem, 1.9rem + 2.6vw, 3.75rem);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+
+  --radius: 4px;
+  --header-h: 3.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0e1613;
+    --surface: #141f1b;
+    --surface-sunk: #0a110e;
+    --ink: #e4e8e2;
+    --ink-2: #bcc5bf;
+    --muted: #96a29b;
+    --rule: #26342e;
+    --rule-strong: #3a4a43;
+    --accent: #6cc79f;
+    --accent-ink: #0e1613;
+    --accent-soft: #183328;
+    --live: #6cc79f;
+    --progress: #e3b04f;
+    --progress-soft: #33290f;
+    --planned: #96a29b;
+    --danger: #f08a7a;
+    --focus: #8ab8ff;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e1613;
+  --surface: #141f1b;
+  --surface-sunk: #0a110e;
+  --ink: #e4e8e2;
+  --ink-2: #bcc5bf;
+  --muted: #96a29b;
+  --rule: #26342e;
+  --rule-strong: #3a4a43;
+  --accent: #6cc79f;
+  --accent-ink: #0e1613;
+  --accent-soft: #183328;
+  --live: #6cc79f;
+  --progress: #e3b04f;
+  --progress-soft: #33290f;
+  --planned: #96a29b;
+  --danger: #f08a7a;
+  --focus: #8ab8ff;
+}
