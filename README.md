@@ -34,7 +34,7 @@ Run the suite against any deployed URL:
 
 ```sh
 BASE_URL=https://<preview-url> EXPECT_NOINDEX=1 npm test   # a preview
-BASE_URL=https://aswin-qa.<subdomain>.workers.dev npm test  # production
+BASE_URL=https://portfolio.aswin-qa.workers.dev npm test       # production
 ```
 
 ## Where to edit content
@@ -83,20 +83,22 @@ No zone permissions are needed because the site uses the workers.dev URL.
 
 **1. Make sure a workers.dev subdomain exists**
 
-1. Sign in at https://dash.cloudflare.com.
-2. In the left sidebar open **Workers & Pages**.
-3. If asked to choose a workers.dev subdomain, pick one. It becomes part of every URL
-   (`aswin-qa.<subdomain>.workers.dev`) and is hard to change later.
+1. Open https://dash.cloudflare.com/?to=/:account/workers-and-pages
+   (sidebar: **Compute** → **Workers & Pages**).
+2. If asked to choose a workers.dev subdomain, pick one. Otherwise it is listed under **Account details**.
+   This account's subdomain is `aswin-qa`, so production is `https://portfolio.aswin-qa.workers.dev`
+   and previews are `pr-<n>-portfolio.aswin-qa.workers.dev`.
 
 **2. Copy your account ID**
 
-1. Still in **Workers & Pages**, find **Account details** on the right.
-2. Click the copy button next to **Account ID**. Keep it for step 4.
-   (Alternative: press Cmd+K in the dashboard, type "Copy account ID", press Enter.)
+1. Press Cmd+K (or click **Quick search** in the sidebar), type `Copy account ID`, press Enter.
+2. Backup: it is the long hex string in the address bar right after `dash.cloudflare.com/`.
 
 **3. Create the API token**
 
-1. Click the profile icon (top right), then **My Profile**, then **API Tokens** in the left menu.
+1. Open https://dash.cloudflare.com/profile/api-tokens (profile icon, top right → **My Profile** → **API Tokens**).
+   Use this user token page, not **Manage account → Account API tokens**: account tokens cannot hold the
+   `User` permissions below.
 2. Click **Create Token**.
 3. Scroll to **Custom token** and click **Get started**.
 4. **Token name**: `github-actions-portfolio`.

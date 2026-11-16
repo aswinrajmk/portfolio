@@ -35,7 +35,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx wrangler deploy --message "main @ ${GITHUB_SHA::7}" | tee deploy.log
-          url=$(grep -Eo 'https://aswin-qa\.[a-z0-9-]+\.workers\.dev' deploy.log | head -1)
+          url=$(grep -Eo 'https://portfolio\.aswin-qa\.workers\.dev' deploy.log | head -1)
           [ -n "$url" ] || { echo "Could not find the workers.dev URL in the deploy output"; exit 1; }
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Production: $url" >> "$GITHUB_STEP_SUMMARY"
