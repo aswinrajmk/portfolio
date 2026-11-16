@@ -15,7 +15,9 @@
     "format": "prettier --write .",
     "test": "playwright test",
     "cf-typegen": "wrangler types worker/worker-configuration.d.ts",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "predev": "npm run db:migrate:local"
   },
   "dependencies": {
     "@fontsource-variable/newsreader": "5.3.0",
