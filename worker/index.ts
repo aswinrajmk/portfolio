@@ -1,4 +1,6 @@
-// Worker entry. Serves the static site from the ASSETS binding and owns /api/* for later phases.
+import { handleApi } from "./api";
+
+// Worker entry. Serves the static site from the ASSETS binding and the Results API under /api/*.
 
 const SECURITY_HEADERS: Record<string, string> = {
   "Content-Security-Policy": [
@@ -22,9 +24,7 @@ export default {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
 
-    const response = url.pathname.startsWith("/api/")
-      ? Response.json({ error: "not_found", message: "The results API arrives in a later phase." }, { status: 404 })
-      : await env.ASSETS.fetch(request);
+    const response = url.pathname.startsWith("/api/") ? await handleApi(request, env) : await env.ASSETS.fetch(request);
 
     return withHeaders(response, env.ENVIRONMENT);
   },

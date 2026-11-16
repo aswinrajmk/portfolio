@@ -25,10 +25,4 @@ test.describe("Response headers and routing", () => {
     expect(response.status()).toBe(404);
     expect(await response.text()).toContain("Page not found");
   });
-
-  test("reserves /api for later phases", async ({ request }) => {
-    const response = await request.get("/api/runs");
-    expect(response.status()).toBe(404);
-    expect(await response.json()).toMatchObject({ error: "not_found" });
-  });
 });
