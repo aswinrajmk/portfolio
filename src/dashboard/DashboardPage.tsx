@@ -22,8 +22,8 @@ export function DashboardPage() {
         <p className="eyebrow">QA dashboard</p>
         <h1>How I work, in public</h1>
         <p className="lede">
-          This site is its own test subject. Every pull request gets a preview deployment and a Playwright run before it
-          reaches production. Each item below says whether it is live or planned.
+          This site is its own test subject. Every pull request gets its own preview deployment, and a Playwright smoke
+          suite runs against it on demand. Each item below says whether it is live or planned.
         </p>
       </header>
       <RunStrip index={1} />

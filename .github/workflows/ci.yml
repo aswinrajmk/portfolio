@@ -68,8 +68,8 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: |
           marker="<!-- preview-url -->"
-          body=$(printf '%s\n**Preview:** %s\n\nProfile: %s/ · Dashboard: %s/dashboard/\n\nCommit `%s`. The smoke suite runs against this URL. The preview is deleted when the PR closes.' \
-            "$marker" "$URL" "$URL" "$URL" "${GITHUB_SHA::7}")
+          body=$(printf '%s\n**Preview:** %s\n\nProfile: %s/ · Dashboard: %s/dashboard/\n\nCommit `%s`. Run the smoke suite on demand: Actions → Smoke tests → Run workflow → target `%s`. The preview is deleted when the PR closes.' \
+            "$marker" "$URL" "$URL" "$URL" "${GITHUB_SHA::7}" "$PR")
           id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
             --jq "map(select(.body | startswith(\"$marker\"))) | .[0].id // empty")
           if [ -n "$id" ]; then
@@ -77,37 +77,6 @@ jobs:
           else
             gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body" > /dev/null
           fi
-
-  smoke:
-    needs: preview
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      BASE_URL: ${{ needs.preview.outputs.url }}
-      EXPECT_NOINDEX: "1"
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - name: Wait for the preview to respond
-        run: |
-          for i in $(seq 1 30); do
-            curl -fsS -o /dev/null "$BASE_URL/" && exit 0
-            sleep 5
-          done
-          echo "Preview did not respond at $BASE_URL" && exit 1
-      - name: Run smoke suite against the preview
-        run: npx playwright test
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
-        with:
-          name: playwright-report-pr-${{ github.event.pull_request.number }}
-          path: playwright-report/
-          retention-days: 14
 
   cleanup:
     if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository

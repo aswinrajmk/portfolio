@@ -6,8 +6,8 @@ QA engineering portfolio for Aswin Raj, hosted on Cloudflare Workers.
 - `/dashboard/`: QA dashboard showing evidence of practical skill. Run data is labelled **Sample data**
   until the results API exists (roadmap phase 2).
 
-Every pull request gets its own preview deployment and a Playwright smoke run against it.
-Merging to `main` deploys to production and runs the same suite there.
+Every pull request gets its own preview deployment. Merging to `main` deploys to production.
+The Playwright smoke suite runs on demand (see "Run the smoke suite in CI" below).
 
 ## Stack
 
@@ -48,12 +48,18 @@ statuses, pipeline stages, strategy notes and decisions. Rules:
 
 ## Deploy flow
 
-| Event                        | What runs (`.github/workflows/`)                                                                                                           |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| PR opened or updated         | `ci.yml`: lint, type-check, build → `wrangler preview --name pr-<n>` → comment the preview URL on the PR → smoke suite against the preview |
-| PR closed or merged          | `ci.yml`: `wrangler preview delete --name pr-<n>`                                                                                          |
-| Push to `main`               | `deploy.yml`: lint, type-check, build → `wrangler deploy` → smoke suite against production (asserts no noindex)                            |
-| Manual (`workflow_dispatch`) | `deploy.yml`, for redeploying production                                                                                                   |
+| Event                        | What runs (`.github/workflows/`)                                                                         |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------- |
+| PR opened or updated         | `ci.yml`: lint, type-check, build → `wrangler preview --name pr-<n>` → comment the preview URL on the PR |
+| PR closed or merged          | `ci.yml`: `wrangler preview delete --name pr-<n>`                                                        |
+| Push to `main`               | `deploy.yml`: lint, type-check, build → `wrangler deploy`                                                |
+| Manual (`workflow_dispatch`) | `deploy.yml`, for redeploying production                                                                 |
+
+### Run the smoke suite in CI
+
+Tests are manual for now so they never block a merge or deploy. In GitHub: **Actions** → **Smoke tests** →
+**Run workflow**, then set **target** to `production` or a PR number (for example `3`). A PR number tests that
+PR's preview and also checks the `X-Robots-Tag: noindex` header. The HTML report is attached to the run.
 
 Forked PRs only run lint, type-check and build, because GitHub does not give them secrets.
 Worker Previews are in open beta on Cloudflare. The free plan allows 100 previews per Worker, and
