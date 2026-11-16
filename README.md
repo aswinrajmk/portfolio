@@ -3,8 +3,10 @@
 QA engineering portfolio for Aswin Raj, hosted on Cloudflare Workers.
 
 - `/`: profile page built from the resume (experience, skills, credentials, contact).
-- `/dashboard/`: QA dashboard showing evidence of practical skill. Run data is labelled **Sample data**
-  until the results API exists (roadmap phase 2).
+- `/dashboard/`: QA dashboard. It shows real test runs against [WealthLite](https://github.com/aswinrajmk/wealthlite),
+  streamed live by [qa-tests](https://github.com/aswinrajmk/qa-tests), and falls back to labelled
+  **Sample data** only when no run is stored.
+- `/dashboard/run/?id=…`: live run report with healed locators, errors, steps, logs and failure screenshots.
 
 Every pull request gets its own preview deployment. Merging to `main` deploys to production.
 The Playwright smoke suite runs on demand (see "Run the smoke suite in CI" below).
@@ -44,7 +46,27 @@ statuses, pipeline stages, strategy notes and decisions. Rules:
 
 - Do not mark a skill `live` without an `evidence` link (a smoke test enforces this).
 - Items with `draft: true` show a Draft label until reviewed.
-- Mock run data lives in `src/data/sample.ts` and always renders with a Sample data badge.
+- Mock run data lives in `src/data/sample.ts` and renders, with a Sample data badge, only when the API has no runs.
+
+## Results API
+
+The Worker serves the API under `/api/*`, backed by D1 (`portfolio-results`; PR previews use
+`portfolio-results-preview`). The schema is in `migrations/`, and the shared types and validation are in
+`shared/results.ts`.
+
+| Route                                       | Auth                                        | Purpose                                                     |
+| ------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------- |
+| `POST /api/runs`                            | `Authorization: Bearer <RESULTS_API_TOKEN>` | Start a run                                                 |
+| `POST /api/runs/:id/results`                | bearer                                      | Add one test result, with an optional base64 JPEG (≤200 KB) |
+| `POST /api/runs/:id/finish`                 | bearer                                      | Finish. The status comes from the stored results            |
+| `GET /api/runs?project=&limit=`             | none                                        | Recent runs (the limit is capped at 50)                     |
+| `GET /api/runs/latest`, `GET /api/runs/:id` | none                                        | Run summary, or a run with its tests                        |
+| `GET /api/results/:id/screenshot`           | none                                        | Failure screenshot (`image/jpeg`)                           |
+| `GET /api/health`                           | none                                        | `{ ok, environment }`                                       |
+
+`RESULTS_API_TOKEN` is a GitHub secret here, and CI copies it to the Worker on every deploy. The
+qa-tests repo holds the same value. Locally, `npm run dev` and `npm test` create `.dev.vars` with a random
+token and migrate local D1. The API tests write only to local D1.
 
 ## Deploy flow
 
@@ -67,12 +89,13 @@ cleanup on close keeps this repo well under that.
 
 ## Required secrets
 
-Two GitHub repository secrets. They are never committed and never needed locally.
+Three GitHub repository secrets. They are never committed and never needed locally.
 
-| Secret                  | What it is                                                       |
-| ----------------------- | ---------------------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`  | Custom API token, permissions below                              |
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID (not secret, but kept with the token) |
+| Secret                  | What it is                                                                               |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | Custom API token, permissions below                                                      |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID (not secret, but kept with the token)                         |
+| `RESULTS_API_TOKEN`     | Write token for the Results API (copied to the Worker on deploy; same value in qa-tests) |
 
 Token permissions, scoped to your account only:
 
@@ -80,6 +103,7 @@ Token permissions, scoped to your account only:
 | ------- | ---------------- | ------ |
 | Account | Workers Scripts  | Edit   |
 | Account | Account Settings | Read   |
+| Account | D1               | Edit   |
 | User    | User Details     | Read   |
 | User    | Memberships      | Read   |
 
@@ -108,9 +132,10 @@ No zone permissions are needed because the site uses the workers.dev URL.
 2. Click **Create Token**.
 3. Scroll to **Custom token** and click **Get started**.
 4. **Token name**: `github-actions-portfolio`.
-5. Under **Permissions**, add four rows (use **+ Add more** for each new row):
+5. Under **Permissions**, add five rows (use **+ Add more** for each new row):
    - `Account` · `Workers Scripts` · `Edit`
    - `Account` · `Account Settings` · `Read`
+   - `Account` · `D1` · `Edit`
    - `User` · `User Details` · `Read`
    - `User` · `Memberships` · `Read`
 6. Under **Account Resources**: `Include` · your account (not "All accounts").

@@ -17,17 +17,17 @@ Hosted on Cloudflare Workers (static assets). No custom domain yet; use the work
 - Production is indexable. Preview deployments must send X-Robots-Tag: noindex.
 
 ## Related repos (separate)
-- wealthlite: the app under test (Worker + D1 + static UI)
-- qa-tests: Playwright + TypeScript framework (created in a later phase)
+- wealthlite (github.com/aswinrajmk/wealthlite): the app under test, https://wealthlite.aswin-qa.workers.dev
+- qa-tests (github.com/aswinrajmk/qa-tests): Playwright + TypeScript framework, self-healing, live reporter
 
 ## Roadmap (tick off as completed)
 - [x] 1. Landing page + Cloudflare hosting + CI deploy + PR previews
-- [ ] 2. Results API (Worker + D1 + R2) and dashboard reading real data
-- [ ] 3. Playwright + API test framework, running in CI against previews
-- [ ] 4. Custom reporter posting results to the Results API
+- [x] 2–4. Live demo loop (merged phases): Results API (Worker + D1) with live run reports, WealthLite app,
+  qa-tests framework with rule-based self-healing and a custom reporter, triggered by every app deploy.
+  R2 (traces, HTML reports) deferred; it needs a payment method on the Cloudflare account.
 - [ ] 5. Telegram bot (natural-language tools, YES confirmation for start_run)
 - [ ] 6. Appium + WDIO mobile run
-- [ ] 7. AI agents: failure triage, test generation (Playwright MCP), AI Gateway cost cap
+- [ ] 7. AI agents: failure triage, AI-assisted healing, test generation (Playwright MCP), AI Gateway cost cap
 - [ ] 8. Email Routing (needs a domain), fault-injection suite, case studies, polish
 
 ## Phase 1 summary (2026-11-16)
@@ -47,4 +47,20 @@ Open issues:
 - Worker Previews are in open beta; Wrangler prints progress before its `--json` output (CI parses from the first `{`).
 - `run_worker_first: true` makes every request a Worker invocation (fine within the free 100k/day).
 - Test strategy notes and the three ADRs are drafts awaiting Aswin's review; leadership content needs specifics.
-- Run data stays Sample data until phase 2 ships the Results API.
+- ~~Run data stays Sample data until phase 2 ships the Results API.~~ Done in phases 2–4.
+
+## Phases 2–4 summary: live demo loop (2026-11-16)
+Push to wealthlite main → its CI deploys (Worker + D1, PBKDF2 passwords, HMAC session cookie) and sends
+`repository_dispatch` (`wealthlite-deployed`) to qa-tests → the Playwright suite (12 tests: UI flows, API,
+copy, axe; plus 5 `node --test` unit tests for healing) runs and its custom reporter streams each result to
+`POST /api/runs/:id/results` here → `/dashboard/` and `/dashboard/run/?id=` update live (2 s polling).
+Self-healing is rule-based (primary locator → test id → form structure → text similarity with synonyms);
+healed tests are their own status with a suggested locator, never a plain pass. Failure screenshots are
+JPEGs (≤200 KB) stored in D1. Rehearsed on production: renaming "Sign in" to "Log in" gave 8 passed,
+3 healed, 1 failed (copy test, with screenshot) about 80 s after the push; reverting gave 12/12 green.
+
+Open issues:
+- Run order in a report is completion order (tests run in parallel), not file order.
+- Runs left "running" for 30+ minutes show as "incomplete"; there is no cleanup job or retention policy yet.
+- QA_DISPATCH_TOKEN in wealthlite is a fine-grained PAT that expires; renew it before expiry.
+- Pipeline diagram and evidence statuses in `src/content/site.ts` now describe the demo loop.
