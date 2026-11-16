@@ -1,4 +1,5 @@
 import { LIMITS, validateRunFinish, validateRunStart, validateTestResult } from "../../shared/results";
+import { postRunReport } from "../bot/report";
 import { error, isAuthorized, json, readJson } from "./http";
 import { addResult, createRun, finishRun, getRun, getScreenshot, listRuns, runState } from "./store";
 
@@ -10,7 +11,7 @@ const ROUTES = {
   screenshot: new RegExp(`^/api/results/(${ID})/screenshot$`),
 };
 
-export async function handleApi(request: Request, env: Env): Promise<Response> {
+export async function handleApi(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, "");
   const method = request.method;
@@ -85,7 +86,10 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
       if (!state) return error(404, "not_found", "Run not found");
       const input = validateRunFinish(parsed.body);
       if (!input.ok) return error(400, "invalid_body", input.error);
-      return json({ id: runId, status: await finishRun(env.DB, runId, input.value.interrupted ?? false) });
+      const status = await finishRun(env.DB, runId, input.value.interrupted ?? false);
+      // Post the report to the Telegram channel after responding, so the reporter is never slowed down.
+      ctx.waitUntil(postRunReport(env, runId));
+      return json({ id: runId, status });
     }
   }
 

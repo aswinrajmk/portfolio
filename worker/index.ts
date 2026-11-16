@@ -1,4 +1,5 @@
 import { handleApi } from "./api";
+import { handleBotEvent, handleTelegram } from "./bot";
 
 // Worker entry. Serves the static site from the ASSETS binding and the Results API under /api/*.
 
@@ -21,10 +22,16 @@ const SECURITY_HEADERS: Record<string, string> = {
 };
 
 export default {
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url);
 
-    const response = url.pathname.startsWith("/api/") ? await handleApi(request, env) : await env.ASSETS.fetch(request);
+    let response: Response;
+    if (url.pathname === "/telegram/webhook" && request.method === "POST")
+      response = await handleTelegram(request, env);
+    else if (url.pathname === "/api/bot/events" && request.method === "POST")
+      response = await handleBotEvent(request, env);
+    else if (url.pathname.startsWith("/api/")) response = await handleApi(request, env, ctx);
+    else response = await env.ASSETS.fetch(request);
 
     return withHeaders(response, env.ENVIRONMENT);
   },
