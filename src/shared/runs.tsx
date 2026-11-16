@@ -1,4 +1,4 @@
-import type { RunStatus, RunSummary, TestStatus } from "../data";
+import type { RequirementState, RunStatus, RunSummary, TestStatus } from "../data";
 
 // Run and test status are carried by text and an icon, never colour alone.
 const RUN_LABEL: Record<RunStatus, string> = {
@@ -44,6 +44,23 @@ export function TestStatusBadge({ status }: { status: TestStatus }) {
     <span className={`outcome outcome--${status}`} data-test-status={status}>
       <Icon kind={status} />
       {TEST_LABEL[status]}
+    </span>
+  );
+}
+
+// Requirement states reuse the outcome styles: passing looks like passed, failing like failed.
+const REQUIREMENT: Record<RequirementState, { kind: Kind; label: string }> = {
+  passing: { kind: "passed", label: "Passing" },
+  failing: { kind: "failed", label: "Failing" },
+  untested: { kind: "skipped", label: "No tests yet" },
+};
+
+export function RequirementStateBadge({ state }: { state: RequirementState }) {
+  const { kind, label } = REQUIREMENT[state];
+  return (
+    <span className={`outcome outcome--${kind}`} data-requirement-state={state}>
+      <Icon kind={kind} />
+      {label}
     </span>
   );
 }

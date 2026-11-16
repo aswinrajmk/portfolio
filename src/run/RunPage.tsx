@@ -88,6 +88,14 @@ function Report({ run }: { run: RunDetail }) {
             <a href={run.targetUrl}>{run.targetUrl.replace(/^https?:\/\//, "")}</a>
           </dd>
         </div>
+        {run.filter && (
+          <div>
+            <dt>Filter</dt>
+            <dd>
+              <span className="mono">{run.filter}</span> (part of the suite)
+            </dd>
+          </div>
+        )}
         {run.ciRunUrl && (
           <div>
             <dt>CI</dt>

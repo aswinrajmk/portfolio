@@ -164,7 +164,13 @@ export const evidence: EvidenceSkill[] = [
     name: "Playwright + TypeScript",
     atWork: "QBurst, 2023 – present",
     status: "live",
-    evidence: { label: "qa-tests: suite, fixtures, self-healing", href: QA_REPO },
+    evidence: { label: "qa-tests: suite, fixtures, self-healing, axe checks", href: QA_REPO },
+  },
+  {
+    name: "Requirement traceability",
+    atWork: "Test planning and traceability across the SDLC",
+    status: "live",
+    evidence: { label: "Requirements coverage matrix", href: "#requirements" },
   },
   {
     name: "API automation",
@@ -179,19 +185,25 @@ export const evidence: EvidenceSkill[] = [
     status: "live",
     evidence: { label: "GitHub Actions runs", href: `${REPO}/actions` },
   },
-  { name: "AI agents in QA", atWork: "Amazon Q, Microsoft Copilot", status: "planned" },
+  {
+    name: "AI agents in QA",
+    atWork: "Amazon Q, Microsoft Copilot",
+    status: "in-progress",
+    evidence: { label: "Telegram bot and test drafting from requirements", href: `${REPO}/tree/main/worker/bot` },
+  },
   { name: "Test strategy", atWork: "Test planning and test case design", status: "in-progress" },
   { name: "Team leadership", atWork: "Lead Engineer, QA", status: "planned" },
 ];
 
 export const pipeline: PipelineStage[] = [
+  { id: "requirement", label: "Requirement", detail: "Issue → tests drafted by AI", status: "live" },
   { id: "change", label: "App change", detail: "Push to WealthLite main", status: "live" },
   { id: "deploy", label: "Deploy", detail: "GitHub Actions to Workers", status: "live" },
   { id: "trigger", label: "Trigger", detail: "Deploy event to qa-tests", status: "live" },
   { id: "tests", label: "QA suite", detail: "Playwright, self-healing", status: "live" },
   { id: "api", label: "Results API", detail: "Worker + D1, per test", status: "live" },
   { id: "dashboard", label: "Live report", detail: "This dashboard", status: "live" },
-  { id: "telegram", label: "Telegram bot", detail: "Ask about runs, start a run", status: "planned" },
+  { id: "telegram", label: "Telegram bot", detail: "Reports, runs, code changes", status: "live" },
 ];
 
 export const strategy = {
@@ -257,7 +269,7 @@ export const upcoming = {
     planned: [
       "AI-assisted healing for cases the rule-based healer cannot resolve (today it uses test ids and text similarity)",
       "A triage agent that groups failed tests and suggests likely causes",
-      "Test generation with the Playwright MCP server, reviewed before merge",
+      "Test generation with the Playwright MCP server, so drafted tests are checked against the live page as they are written",
       "A spending cap on model calls through Cloudflare AI Gateway",
     ],
   },

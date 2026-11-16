@@ -1,7 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { listRequirements } from "../api/requirements";
 import { getRun, listRuns } from "../api/store";
 import { REPOS, type BotConfig, type Repo } from "./config";
-import { GitHub, sensitiveFiles } from "./github";
+import { prepareMerge, prepareRun } from "./gated";
+import { GitHub } from "./github";
 import { createPending, type PendingAction } from "./store";
 
 // Turns a Telegram message into an answer, using Claude with tools.
@@ -16,13 +18,16 @@ const SYSTEM = `You are the QA assistant for Aswin's portfolio project, used fro
 Projects (GitHub owner aswinrajmk):
 - wealthlite: the demo wealth app under test (login screen, holdings). Its deploys trigger the QA suite.
 - qa-tests: the Playwright + TypeScript suite with self-healing locators and the results reporter.
+  Tests are tagged with the requirement they cover, for example @REQ-3 for wealthlite issue #3.
 - portfolio: the portfolio website, QA dashboard and Results API (this bot also lives here).
 
 What you can do:
 - Answer questions about test runs with the run tools. Base every claim on tool results; never invent numbers.
 - Request code changes with request_code_change. Write the instruction so an engineer could act on it
   without this chat: say what to change, where if known, and what "done" looks like.
-- Merge or close pull requests, list open PRs, check PR status, and start a QA run.
+- Show requirement coverage (requirement → linked tests → latest result) with list_requirements.
+- Merge or close pull requests, list open PRs, check PR status, and start a QA run. A run can be limited
+  with a Playwright --grep filter: "@REQ-3" for one requirement, or a word from the test titles like "login".
 
 Rules:
 - request_code_change, merge_pr, close_pr and start_qa_run do not act. They send Aswin a confirmation with
@@ -86,7 +91,22 @@ const TOOLS: Anthropic.Beta.BetaTool[] = [
     "repo",
     "number",
   ]),
-  tool("start_qa_run", "Ask to start the QA suite against the live wealthlite app.", {}),
+  tool(
+    "list_requirements",
+    "List wealthlite requirements (GitHub issues labelled requirement) with their linked tests and each test's latest result.",
+    {},
+  ),
+  tool(
+    "start_qa_run",
+    "Ask to start the QA suite against the live wealthlite app, optionally only the tests matching a filter.",
+    {
+      filter: {
+        type: "string",
+        description: 'Playwright --grep pattern such as "@REQ-3" or "login". Empty string runs the whole suite.',
+      },
+    },
+    ["filter"],
+  ),
 ];
 
 export interface AgentResult {
@@ -148,23 +168,9 @@ async function runTool(ctx: Ctx, name: string, input: Record<string, unknown>): 
     }
     case "merge_pr": {
       if (!isRepo(input.repo)) return "Unknown repo.";
-      const pr = await github(ctx).pr(input.repo, Number(input.number));
-      if (pr.state !== "open") return `PR #${pr.number} is not open (merged: ${pr.merged}).`;
-      if (pr.checks.total === 0) return `PR #${pr.number} has no checks yet. Wait for CI to start, then ask again.`;
-      if (pr.checks.pending.length) return `Checks still running on PR #${pr.number}: ${pr.checks.pending.join(", ")}.`;
-      if (pr.checks.failed.length)
-        return `Cannot merge PR #${pr.number}: failing checks ${pr.checks.failed.join(", ")}.`;
-      const sensitive = sensitiveFiles(pr.files);
-      ctx.pending = await createPending(
-        env.DB,
-        chatId,
-        "merge_pr",
-        { repo: input.repo, number: pr.number, sha: pr.headSha, sensitive },
-        `Merge ${input.repo} PR #${pr.number}: ${pr.title}`,
-      );
-      return sensitive.length
-        ? `Confirmation sent. This PR changes sensitive files (${sensitive.join(", ")}), so Aswin must reply MERGE ANYWAY.`
-        : "Confirmation sent to Aswin with YES/Cancel buttons. All checks passed.";
+      const prepared = await prepareMerge(env, cfg, chatId, input.repo, Number(input.number));
+      if (prepared.pending) ctx.pending = prepared.pending;
+      return prepared.message;
     }
     case "close_pr": {
       if (!isRepo(input.repo)) return "Unknown repo.";
@@ -179,15 +185,13 @@ async function runTool(ctx: Ctx, name: string, input: Record<string, unknown>): 
       );
       return "Confirmation sent to Aswin with YES/Cancel buttons.";
     }
+    case "list_requirements": {
+      return JSON.stringify(await listRequirements(env, "wealthlite")).slice(0, 30_000);
+    }
     case "start_qa_run": {
-      ctx.pending = await createPending(
-        env.DB,
-        chatId,
-        "start_qa_run",
-        {},
-        "Start the QA suite against live wealthlite",
-      );
-      return "Confirmation sent to Aswin with YES/Cancel buttons.";
+      const prepared = await prepareRun(env, chatId, input.filter);
+      if (prepared.pending) ctx.pending = prepared.pending;
+      return prepared.message;
     }
     default:
       return `Unknown tool ${name}.`;

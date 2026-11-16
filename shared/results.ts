@@ -21,6 +21,8 @@ export const LIMITS = {
   screenshotBytes: 200 * 1024,
   bodyBytes: 512 * 1024,
   runsPerPage: 50,
+  tags: 20,
+  tag: 60,
   abandonAfterMs: 30 * 60 * 1000,
 } as const;
 
@@ -44,6 +46,8 @@ export interface RunStartInput {
   commitSha?: string;
   commitMessage?: string;
   ciRunUrl?: string;
+  /** Playwright --grep pattern when only part of the suite ran, for example "@REQ-3". */
+  filter?: string;
 }
 
 export interface TestResultInput {
@@ -55,6 +59,8 @@ export interface TestResultInput {
   steps?: TestStep[];
   healing?: Healing;
   logs?: string[];
+  /** Playwright tags, for example ["@REQ-1", "@smoke"]. */
+  tags?: string[];
   /** Base64-encoded JPEG, at most LIMITS.screenshotBytes once decoded. */
   screenshot?: string;
 }
@@ -80,6 +86,7 @@ export interface RunSummary {
   commitSha: string | null;
   commitMessage: string | null;
   ciRunUrl: string | null;
+  filter: string | null;
   startedAt: string;
   finishedAt: string | null;
   counts: RunCounts;
@@ -95,11 +102,48 @@ export interface TestResult {
   steps: TestStep[];
   healing: Healing | null;
   logs: string[];
+  tags: string[];
   hasScreenshot: boolean;
 }
 
 export interface RunDetail extends RunSummary {
   tests: TestResult[];
+}
+
+// ---------- Requirements (GitHub issues labelled "requirement" in the app repo) ----------
+
+/** Matches a requirement tag and captures the issue number. */
+export const REQUIREMENT_TAG = /^@REQ-(\d+)$/;
+
+/** The latest result of one test linked to a requirement. */
+export interface RequirementTest {
+  title: string;
+  file: string;
+  status: TestStatus;
+  runId: string;
+  ranAt: string;
+}
+
+/**
+ * "untested": no tagged test has reported yet. "failing": at least one linked test failed on its latest run.
+ * "passing": every linked test passed or healed on its latest run.
+ */
+export type RequirementState = "untested" | "failing" | "passing";
+
+export interface Requirement {
+  number: number;
+  title: string;
+  url: string | null;
+  /** GitHub issue state. Null when the issue could not be read (the tag still shows). */
+  issueState: "open" | "closed" | null;
+  state: RequirementState;
+  tests: RequirementTest[];
+}
+
+export interface RequirementsResponse {
+  requirements: Requirement[];
+  /** False when GitHub could not be reached, so titles may be missing. */
+  issuesLoaded: boolean;
 }
 
 // ---------- Validation (hand-written to keep the Worker dependency-free) ----------
@@ -175,6 +219,7 @@ export function validateRunStart(body: unknown): Validated<RunStartInput> {
     commitSha: str(o, "commitSha", 64),
     commitMessage: str(o, "commitMessage", LIMITS.text),
     ciRunUrl: httpUrl(o, "ciRunUrl"),
+    filter: str(o, "filter", 100),
   }));
 }
 
@@ -227,6 +272,18 @@ export function validateTestResult(body: unknown): Validated<TestResultInput> {
       result.logs = o.logs.map((line) => {
         if (typeof line !== "string") throw new ValidationError("each log line must be a string");
         return line.slice(0, LIMITS.logLine);
+      });
+    }
+
+    if (o.tags !== undefined) {
+      if (!Array.isArray(o.tags) || o.tags.length > LIMITS.tags) {
+        throw new ValidationError(`tags must be an array of at most ${LIMITS.tags}`);
+      }
+      result.tags = o.tags.map((tag) => {
+        if (typeof tag !== "string" || tag.length > LIMITS.tag || !/^@[\w.-]+$/.test(tag)) {
+          throw new ValidationError("each tag must look like @name");
+        }
+        return tag;
       });
     }
 

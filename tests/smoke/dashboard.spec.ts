@@ -11,6 +11,7 @@ test.describe("QA dashboard", () => {
     await expect(page).toHaveTitle("QA dashboard · Aswin Raj");
     expect(await sectionHeadings(page)).toEqual([
       "Latest pipeline run",
+      "Requirements coverage",
       "Skills and evidence",
       "Pipeline architecture",
       "Test strategy",
@@ -37,9 +38,18 @@ test.describe("QA dashboard", () => {
 
   test("shows a status badge for every skill", async ({ page }) => {
     const rows = page.locator("#evidence tbody tr");
-    await expect(rows).toHaveCount(7);
+    await expect(rows).toHaveCount(8);
     for (const row of await rows.all()) {
       await expect(row.locator("[data-status]")).toHaveText(/^(Live|In progress|Planned)$/);
+    }
+  });
+
+  test("shows requirement coverage with a state for every requirement, or says why not", async ({ page }) => {
+    const section = page.locator("#requirements");
+    await expect(section.locator("table, .note").first()).toBeVisible();
+    const rows = section.locator("tbody tr");
+    for (const row of await rows.all()) {
+      await expect(row.locator("[data-requirement-state]")).toHaveText(/^(Passing|Failing|No tests yet)$/);
     }
   });
 
@@ -57,7 +67,7 @@ test.describe("QA dashboard", () => {
 
   test("renders the pipeline diagram with an accessible name", async ({ page }) => {
     await expect(
-      page.getByRole("img", { name: "Pipeline from an app change to the live report and Telegram" }),
+      page.getByRole("img", { name: "Pipeline from a requirement to the live report and Telegram" }),
     ).toBeVisible();
   });
 

@@ -242,3 +242,74 @@ test("posts a report to the channel when a run finishes", async ({ request }) =>
     .toBe(true);
   await expect.poll(async () => (await stub(request)).some((r) => r.path.endsWith("/sendPhoto"))).toBe(true);
 });
+
+test("/run with a filter waits for YES, then dispatches the suite with --grep", async ({ request }) => {
+  await say(request, "/run @REQ-3");
+  const confirm = (await sentTo(request, OWNER)).at(-1)?.body as {
+    text: string;
+    reply_markup: { inline_keyboard: { callback_data: string }[][] };
+  };
+  expect(confirm.text).toContain("@REQ-3");
+  expect((await stub(request)).filter((r) => r.path === "/v1/messages")).toEqual([]);
+  await say(request, "YES");
+  const dispatches = (await stub(request)).filter((r) => r.path.endsWith("/dispatches"));
+  expect(dispatches).toHaveLength(1);
+  expect(dispatches[0]?.path).toBe("/repos/aswinrajmk/qa-tests/actions/workflows/qa.yml/dispatches");
+  expect(dispatches[0]?.body).toMatchObject({ inputs: { grep: "@REQ-3" } });
+});
+
+test("/run refuses filters with shell characters", async ({ request }) => {
+  await say(request, "/run login; rm -rf /");
+  expect(String((await sentTo(request, OWNER)).at(-1)?.body?.text)).toContain("not allowed");
+  await say(request, "YES");
+  expect((await stub(request)).filter((r) => r.path.endsWith("/dispatches"))).toHaveLength(0);
+});
+
+test("/merge checks the PR and merges after YES without using AI", async ({ request }) => {
+  await say(request, "/merge qa-tests 12");
+  await say(request, "YES");
+  const merges = (await stub(request)).filter((r) => r.path.endsWith("/merge"));
+  expect(merges).toHaveLength(1);
+  expect(merges[0]?.path).toBe("/repos/aswinrajmk/qa-tests/pulls/12/merge");
+  expect((await stub(request)).filter((r) => r.path === "/v1/messages")).toEqual([]);
+});
+
+test("/reqs lists requirement coverage", async ({ request }) => {
+  await say(request, "/reqs");
+  const text = String((await sentTo(request, OWNER)).at(-1)?.body?.text);
+  expect(text).toContain("Sign in with email and password");
+  expect(text).toContain("/dashboard/#requirements");
+});
+
+test("explains a low Anthropic credit balance instead of a generic error", async ({ request }) => {
+  await request.post(`${STUB}/__anthropicError`, {
+    data: { status: 400, message: "Your credit balance is too low to access the Anthropic API." },
+  });
+  await say(request, "How did the last run go?");
+  const text = String((await sentTo(request, OWNER)).at(-1)?.body?.text);
+  expect(text).toContain("credit is too low");
+  expect(text).toContain("/latest");
+});
+
+test("a requirement event tells the owner about the drafted tests", async ({ request }) => {
+  const post = (data: object, token = vars.BOT_EVENTS_TOKEN) =>
+    request.post("/api/bot/events", { headers: { Authorization: `Bearer ${token}` }, data });
+  expect((await post({ kind: "requirement", issue: 5 }, "wrong")).status()).toBe(401);
+  expect((await post({ kind: "requirement", issue: "5" })).status()).toBe(400);
+  const ok = await post({
+    kind: "requirement",
+    issue: 5,
+    title: "Show a total gain or loss",
+    status: "pr_opened",
+    pr_number: 14,
+    pr_url: "https://github.com/aswinrajmk/qa-tests/pull/14",
+    passed: 1,
+    failed: 2,
+    summary: "Added three tests for the gain/loss figure.",
+  });
+  expect(ok.status()).toBe(200);
+  const text = String((await sentTo(request, OWNER)).at(-1)?.body?.text);
+  expect(text).toContain("Requirement #5");
+  expect(text).toContain("1 passed · 2 failed");
+  expect(text).toContain("/merge qa-tests 14");
+});

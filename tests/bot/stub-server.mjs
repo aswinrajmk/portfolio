@@ -7,6 +7,24 @@ let requests = [];
 let anthropicQueue = [];
 let checkRuns = [{ name: "verify", status: "completed", conclusion: "success" }];
 let prFiles = [{ filename: "src/LoginPage.tsx" }];
+let anthropicError = null;
+// Requirement issues in wealthlite. The issues API also returns pull requests, which the Worker must skip.
+const ISSUES = [
+  {
+    number: 1,
+    title: "Sign in with email and password",
+    html_url: "https://github.com/aswinrajmk/wealthlite/issues/1",
+    state: "open",
+  },
+  { number: 2, title: "Sign out", html_url: "https://github.com/aswinrajmk/wealthlite/issues/2", state: "closed" },
+  {
+    number: 3,
+    title: "A pull request",
+    html_url: "https://github.com/aswinrajmk/wealthlite/pull/3",
+    state: "open",
+    pull_request: {},
+  },
+];
 
 const send = (res, status, body) => {
   res.writeHead(status, { "Content-Type": "application/json" });
@@ -42,10 +60,15 @@ createServer(async (req, res) => {
     anthropicQueue = [];
     checkRuns = [{ name: "verify", status: "completed", conclusion: "success" }];
     prFiles = [{ filename: "src/LoginPage.tsx" }];
+    anthropicError = null;
     return send(res, 200, { ok: true });
   }
   if (path === "/__anthropic") {
     anthropicQueue.push(...body.responses);
+    return send(res, 200, { ok: true });
+  }
+  if (path === "/__anthropicError") {
+    anthropicError = body;
     return send(res, 200, { ok: true });
   }
   if (path === "/__github") {
@@ -58,6 +81,11 @@ createServer(async (req, res) => {
 
   // Anthropic Messages API
   if (path === "/v1/messages") {
+    if (anthropicError) {
+      const { status, message: text } = anthropicError;
+      anthropicError = null;
+      return send(res, status, { type: "error", error: { type: "invalid_request_error", message: text } });
+    }
     const next = anthropicQueue.shift() ?? { content: [{ type: "text", text: "stub reply" }], stop_reason: "end_turn" };
     return send(res, 200, message(next.content, next.stop_reason));
   }
@@ -82,6 +110,7 @@ createServer(async (req, res) => {
       head: { sha: "abc123def456" },
     });
   }
+  if (/^\/repos\/[^/]+\/wealthlite\/issues$/.test(path)) return send(res, 200, ISSUES);
   if (/\/commits\/[^/]+\/check-runs$/.test(path)) return send(res, 200, { check_runs: checkRuns });
   if (/\/pulls$/.test(path)) return send(res, 200, []);
 

@@ -62,6 +62,7 @@ The Worker serves the API under `/api/*`, backed by D1 (`portfolio-results`; PR 
 | `GET /api/runs?project=&limit=`             | none                                        | Recent runs (the limit is capped at 50)                     |
 | `GET /api/runs/latest`, `GET /api/runs/:id` | none                                        | Run summary, or a run with its tests                        |
 | `GET /api/results/:id/screenshot`           | none                                        | Failure screenshot (`image/jpeg`)                           |
+| `GET /api/requirements`                     | none                                        | wealthlite requirement issues with linked tests and results |
 | `GET /api/health`                           | none                                        | `{ ok, environment }`                                       |
 
 `RESULTS_API_TOKEN` is a GitHub secret here, and CI copies it to the Worker on every deploy. The
@@ -169,6 +170,19 @@ A private Telegram bot, served by this Worker at `POST /telegram/webhook`, gives
 - **Merge or close PRs and start QA runs.** Each one needs YES. Merging is refused until every check passes.
   PRs that touch `.github/`, wrangler config, migrations or `package.json` need **MERGE ANYWAY**.
 - **Run reports:** every finished run is posted to a Telegram channel, with the first failure screenshot.
+- **Requirements:** when a wealthlite requirement issue changes, qa-tests drafts tests for it and the bot
+  sends the PR with pass/fail counts. `/reqs` (or "which requirements are failing?") shows coverage, and
+  `/run @REQ-3` runs only that requirement's tests.
+
+## Requirements coverage
+
+Requirements are wealthlite issues labelled `requirement`; tests link to them with tags like `@REQ-3`, which
+the qa-tests reporter sends with each result (`tags` on a result, `filter` on a partial run; migration
+`0003`). `GET /api/requirements` joins the issues (read from GitHub, cached 5 minutes per isolate) with each
+tagged test's latest result, and the dashboard shows it as a matrix. Results older than the latest full run
+with tagged tests are ignored, so renamed tests drop out. Flow: issue changed → wealthlite `requirement.yml` →
+qa-tests `requirement.yml` (Claude Code drafts tests, runs them, opens a PR) → Telegram → merge → next run
+fills the matrix.
 
 Safety:
 
@@ -177,7 +191,9 @@ Safety:
   (10-minute expiry), which Worker code runs after YES.
 - The bot's GitHub token has no Workflows permission, so bot changes can never alter CI.
 
-Shortcuts: `/latest`, `/runs`, `/pending`, `/reset`, `/help`. Setup is one interactive script, run by the
+Shortcuts work without Anthropic API credit: `/latest`, `/runs`, `/reqs`, `/run [filter]`,
+`/merge <repo> <number>`, `/pending`, `/reset`, `/help`. Free-form messages need API credit; if it runs out,
+the bot says so instead of a generic error. Setup is one interactive script, run by the
 owner in a terminal: `npm run bot:setup`. It checks each token, stores it as a Worker or GitHub secret without
 printing it, and registers the webhook. Bot code is in `worker/bot/`. Local tests (`tests/smoke/bot.spec.ts`)
 run against a stub of Telegram, GitHub and Anthropic (`tests/bot/stub-server.mjs`).
