@@ -17,7 +17,8 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: isLocal
     ? {
-        command: "npm run build && npx vite preview --port 4173 --strictPort",
+        command:
+          "node scripts/ensure-dev-vars.mjs && npm run db:migrate:local && npm run build && npx vite preview --port 4173 --strictPort",
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

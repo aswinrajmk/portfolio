@@ -1,20 +1,35 @@
 import { sampleLatestRun } from "./sample";
-import type { RunSummary } from "./types";
+import type { RunDetail, RunSummary, Sourced } from "./types";
 
-export type { DataSource, RunOutcome, RunSummary, SuiteResult } from "./types";
+export type * from "./types";
 
-// Phase 2 replaces the body with a call to the Results API. Callers must not change.
-export async function getLatestRun(): Promise<RunSummary> {
-  return sampleLatestRun;
+const PROJECT = "wealthlite";
+
+async function getJson<T>(path: string): Promise<T | null> {
+  try {
+    const response = await fetch(path, { headers: { Accept: "application/json" } });
+    if (!response.ok) return null;
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
 }
 
-export function totals(run: RunSummary) {
-  return run.suites.reduce(
-    (sum, suite) => ({
-      passed: sum.passed + suite.passed,
-      failed: sum.failed + suite.failed,
-      skipped: sum.skipped + suite.skipped,
-    }),
-    { passed: 0, failed: 0, skipped: 0 },
-  );
+// Falls back to labelled sample data when no real run exists yet or the API is unreachable.
+export async function getLatestRun(): Promise<Sourced<RunSummary>> {
+  const run = await getJson<RunSummary>(`/api/runs/latest?project=${PROJECT}`);
+  return run ? { source: "live", data: run } : { source: "sample", data: sampleLatestRun };
 }
+
+export async function getRecentRuns(limit = 10): Promise<RunSummary[]> {
+  const body = await getJson<{ runs: RunSummary[] }>(`/api/runs?project=${PROJECT}&limit=${limit}`);
+  return body?.runs ?? [];
+}
+
+export async function getRun(id: string): Promise<RunDetail | null> {
+  return getJson<RunDetail>(`/api/runs/${encodeURIComponent(id)}`);
+}
+
+export const screenshotUrl = (testId: string) => `/api/results/${encodeURIComponent(testId)}/screenshot`;
+
+export const runReportUrl = (runId: string) => `/dashboard/run/?id=${encodeURIComponent(runId)}`;

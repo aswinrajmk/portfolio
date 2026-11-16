@@ -1,0 +1,16 @@
+// Used only by CI to apply D1 migrations to the shared preview database
+// (`wrangler d1 migrations apply DB --remote --config wrangler.preview-migrations.jsonc`).
+// Keep database_id in sync with `previews.d1_databases` in wrangler.jsonc.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "portfolio",
+  "compatibility_date": "2026-11-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "portfolio-results-preview",
+      "database_id": "6d8f72cd-7c80-4a25-a02b-c1cb3cd49306",
+      "migrations_dir": "migrations",
+    },
+  ],
+}

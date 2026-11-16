@@ -1,2 +1,4 @@
-# Local-only Worker variables. Copy to .dev.vars (gitignored) if you need to override anything.
+# Local-only Worker secrets and variables. Copy to .dev.vars (gitignored).
+# `npm test` creates .dev.vars with a random RESULTS_API_TOKEN if it is missing.
+RESULTS_API_TOKEN=change-me-local-only
 # ENVIRONMENT=preview   # uncomment to see the noindex header locally

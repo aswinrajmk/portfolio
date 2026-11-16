@@ -1,23 +1,19 @@
-// "sample" data is mock data shown with a visible label. "live" comes from the Results API (Phase 2).
+// "sample" is mock data shown with a visible label. "live" comes from the Results API.
 export type DataSource = "sample" | "live";
 
-export type RunOutcome = "passed" | "failed" | "running";
-
-export interface SuiteResult {
-  name: string;
-  passed: number;
-  failed: number;
-  skipped: number;
-}
-
-export interface RunSummary {
+export interface Sourced<T> {
   source: DataSource;
-  id: string;
-  outcome: RunOutcome;
-  branch: string;
-  commit: string;
-  environment: string;
-  startedAt: string;
-  durationSeconds: number;
-  suites: SuiteResult[];
+  data: T;
 }
+
+export type {
+  Healing,
+  RunCounts,
+  RunDetail,
+  RunStatus,
+  RunSummary,
+  RunTrigger,
+  TestResult,
+  TestStatus,
+  TestStep,
+} from "../../shared/results";

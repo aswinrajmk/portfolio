@@ -15,11 +15,28 @@
   "vars": {
     "ENVIRONMENT": "production",
   },
+  // Results store. IDs are not secrets. Previews share a separate database so they never touch production data.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "portfolio-results",
+      "database_id": "d6011246-9a5a-4d5d-8c08-06ea24322814",
+      "migrations_dir": "migrations",
+    },
+  ],
   // Settings used by `wrangler preview` deployments (one per pull request).
   "previews": {
     "vars": {
       "ENVIRONMENT": "preview",
     },
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "portfolio-results-preview",
+        "database_id": "6d8f72cd-7c80-4a25-a02b-c1cb3cd49306",
+        "migrations_dir": "migrations",
+      },
+    ],
   },
   "observability": {
     "enabled": true,

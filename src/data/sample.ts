@@ -1,18 +1,16 @@
 import type { RunSummary } from "./types";
 
-// Mock data for Phase 1. Shown with a "Sample data" badge; never presented as a real run.
+// Shown only while the Results API has no runs. Always rendered with a "Sample data" badge.
 export const sampleLatestRun: RunSummary = {
-  source: "sample",
   id: "sample-run",
-  outcome: "passed",
-  branch: "main",
-  commit: "a1b2c3d",
-  environment: "preview",
+  project: "wealthlite",
+  status: "passed",
+  trigger: "deploy",
+  targetUrl: "https://wealthlite.aswin-qa.workers.dev",
+  commitSha: "a1b2c3d",
+  commitMessage: "Sample commit",
+  ciRunUrl: null,
   startedAt: "2026-11-16T09:30:00Z",
-  durationSeconds: 94,
-  suites: [
-    { name: "Smoke", passed: 12, failed: 0, skipped: 0 },
-    { name: "Regression", passed: 48, failed: 0, skipped: 2 },
-    { name: "API", passed: 31, failed: 0, skipped: 0 },
-  ],
+  finishedAt: "2026-11-16T09:31:34Z",
+  counts: { passed: 9, failed: 0, healed: 1, skipped: 0 },
 };
