@@ -41,38 +41,30 @@
 }
 
 .run__stat--outcome dd {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
   font-size: var(--step-1);
 }
 
-.outcome__icon {
-  width: 1rem;
-  height: 1rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.run__commit-msg {
+  color: var(--ink-2);
 }
 
-.outcome--passed dd {
-  color: var(--live);
+.run__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-5);
+  font-weight: 500;
 }
 
-.outcome--failed dd {
-  color: var(--danger);
-}
-
-.run__suites {
+.recent {
   width: 100%;
+  min-width: 36rem;
+  margin-top: var(--space-5);
   border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
 }
 
-.run__suites caption {
-  padding: var(--space-3) var(--space-5) var(--space-2);
+.recent caption {
+  padding-bottom: var(--space-2);
   font-family: var(--font-mono);
   font-size: var(--step--1);
   color: var(--muted);
@@ -81,38 +73,29 @@
   letter-spacing: 0.06em;
 }
 
-.run__suites th,
-.run__suites td {
-  padding: var(--space-2) var(--space-5);
-  text-align: right;
-  border-top: 1px solid var(--rule);
-  font-family: var(--font-mono);
+.recent th,
+.recent td {
+  padding: var(--space-2) var(--space-4) var(--space-2) 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--rule);
   font-size: 0.9375rem;
 }
 
-@media (max-width: 40rem) {
-  .run__stat,
-  .run__suites th,
-  .run__suites td,
-  .run__suites caption {
-    padding-left: var(--space-3);
-    padding-right: var(--space-3);
-  }
-}
-
-.run__suites th:first-child {
-  text-align: left;
-  font-family: var(--font-sans);
-}
-
-.run__suites thead th {
+.recent thead th {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
   font-weight: 500;
   color: var(--muted);
-  font-size: var(--step--1);
 }
 
-.run__suites tbody th {
+.recent tbody th {
   font-weight: 500;
+  white-space: nowrap;
+}
+
+.recent__msg {
+  color: var(--ink-2);
 }
 
 /* Evidence matrix */

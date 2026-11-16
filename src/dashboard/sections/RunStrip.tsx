@@ -1,46 +1,25 @@
-import { useEffect, useState } from "react";
-import { getLatestRun, totals, type RunSummary } from "../../data";
+import { getLatestRun, getRecentRuns, runReportUrl, type RunSummary, type Sourced } from "../../data";
 import { Section } from "../../shared/Layout";
+import { Counts, formatDate, runDuration, RunStatusBadge, shortSha } from "../../shared/runs";
 import { Tag } from "../../shared/StatusBadge";
+import { usePolled } from "../../shared/usePolled";
 
-const OUTCOME_LABEL: Record<RunSummary["outcome"], string> = {
-  passed: "Passed",
-  failed: "Failed",
-  running: "Running",
-};
-
-function formatDuration(seconds: number) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+interface Snapshot {
+  latest: Sourced<RunSummary>;
+  recent: RunSummary[];
 }
 
-function formatDate(iso: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-    timeZoneName: "short",
-  }).format(new Date(iso));
+async function load(): Promise<Snapshot> {
+  const [latest, recent] = await Promise.all([getLatestRun(), getRecentRuns(8)]);
+  return { latest, recent };
 }
+
+// While a run is in progress the strip refreshes every 3 seconds; otherwise every 30.
+const nextDelay = (s: Snapshot) => (s.latest.data.status === "running" ? 3_000 : 30_000);
 
 export function RunStrip({ index }: { index: number }) {
-  const [run, setRun] = useState<RunSummary | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    void getLatestRun().then((result) => {
-      if (active) setRun(result);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const isSample = run?.source === "sample";
+  const snapshot = usePolled(load, nextDelay);
+  const isSample = snapshot?.latest.source === "sample";
 
   return (
     <Section
@@ -49,48 +28,54 @@ export function RunStrip({ index }: { index: number }) {
       title="Latest pipeline run"
       aside={isSample ? <Tag kind="sample">Sample data</Tag> : null}
     >
-      {isSample && (
-        <p className="note">These numbers are placeholders. Real results replace them when the results API ships.</p>
+      <p className="note">
+        {isSample
+          ? "No real runs are stored yet, so these numbers are placeholders."
+          : "Tests run against wealthlite, a small demo app with synthetic data, every time it deploys."}
+      </p>
+      {snapshot ? (
+        <>
+          <RunDetails run={snapshot.latest.data} source={snapshot.latest.source} />
+          {!isSample && snapshot.recent.length > 1 && <RecentRuns runs={snapshot.recent} />}
+        </>
+      ) : (
+        <p className="note">Loading the latest run…</p>
       )}
-      {run ? <RunDetails run={run} /> : <p className="note">Loading the latest run…</p>}
     </Section>
   );
 }
 
-function RunDetails({ run }: { run: RunSummary }) {
-  const sum = totals(run);
+function RunDetails({ run, source }: { run: RunSummary; source: Sourced<RunSummary>["source"] }) {
+  const duration = runDuration(run);
   return (
-    <div className="run" data-source={run.source}>
+    <div className="run" data-source={source}>
       <dl className="run__stats">
-        <div className={`run__stat run__stat--outcome outcome--${run.outcome}`}>
-          <dt>Outcome</dt>
+        <div className="run__stat run__stat--outcome">
+          <dt>Status</dt>
           <dd>
-            <svg viewBox="0 0 12 12" aria-hidden="true" className="outcome__icon">
-              {run.outcome === "passed" ? <path d="M2.5 6.5l2.3 2.3L9.5 3.8" /> : <path d="M3 3l6 6M9 3l-6 6" />}
-            </svg>
-            {OUTCOME_LABEL[run.outcome]}
+            <RunStatusBadge status={run.status} />
           </dd>
         </div>
         <div className="run__stat">
           <dt>Tests</dt>
           <dd>
-            <span className="num">{sum.passed}</span> passed · <span className="num">{sum.failed}</span> failed ·{" "}
-            <span className="num">{sum.skipped}</span> skipped
+            <Counts run={run} />
           </dd>
         </div>
         <div className="run__stat">
           <dt>Duration</dt>
-          <dd className="num">{formatDuration(run.durationSeconds)}</dd>
+          <dd className="num">{duration ?? "In progress"}</dd>
         </div>
         <div className="run__stat">
-          <dt>Branch · commit</dt>
-          <dd className="mono">
-            {run.branch} · {run.commit}
+          <dt>Trigger</dt>
+          <dd>{run.trigger === "deploy" ? "App deploy" : "Manual"}</dd>
+        </div>
+        <div className="run__stat">
+          <dt>Commit</dt>
+          <dd>
+            <span className="mono">{shortSha(run.commitSha)}</span>
+            {run.commitMessage && <span className="run__commit-msg"> {run.commitMessage}</span>}
           </dd>
-        </div>
-        <div className="run__stat">
-          <dt>Environment</dt>
-          <dd>{run.environment}</dd>
         </div>
         <div className="run__stat">
           <dt>Started</dt>
@@ -99,23 +84,49 @@ function RunDetails({ run }: { run: RunSummary }) {
           </dd>
         </div>
       </dl>
-      <table className="run__suites">
-        <caption>Results by suite</caption>
+      {source === "live" && (
+        <p className="run__actions">
+          <a href={runReportUrl(run.id)}>
+            Open the full run report <span aria-hidden="true">→</span>
+          </a>
+          {run.ciRunUrl && <a href={run.ciRunUrl}>CI run on GitHub</a>}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function RecentRuns({ runs }: { runs: RunSummary[] }) {
+  return (
+    <div className="table-wrap">
+      <table className="recent">
+        <caption>Recent runs</caption>
         <thead>
           <tr>
-            <th scope="col">Suite</th>
-            <th scope="col">Passed</th>
-            <th scope="col">Failed</th>
-            <th scope="col">Skipped</th>
+            <th scope="col">Started</th>
+            <th scope="col">Status</th>
+            <th scope="col">Tests</th>
+            <th scope="col">Commit</th>
           </tr>
         </thead>
         <tbody>
-          {run.suites.map((suite) => (
-            <tr key={suite.name}>
-              <th scope="row">{suite.name}</th>
-              <td>{suite.passed}</td>
-              <td>{suite.failed}</td>
-              <td>{suite.skipped}</td>
+          {runs.map((run) => (
+            <tr key={run.id}>
+              <th scope="row">
+                <a href={runReportUrl(run.id)}>
+                  <time dateTime={run.startedAt}>{formatDate(run.startedAt)}</time>
+                </a>
+              </th>
+              <td>
+                <RunStatusBadge status={run.status} />
+              </td>
+              <td>
+                <Counts run={run} />
+              </td>
+              <td>
+                <span className="mono">{shortSha(run.commitSha)}</span>{" "}
+                <span className="recent__msg">{run.commitMessage}</span>
+              </td>
             </tr>
           ))}
         </tbody>

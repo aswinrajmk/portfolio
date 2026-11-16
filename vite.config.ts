@@ -15,6 +15,7 @@ export default defineConfig({
           input: {
             main: page("./index.html"),
             dashboard: page("./dashboard/index.html"),
+            run: page("./dashboard/run/index.html"),
             notFound: page("./404.html"),
           },
         },

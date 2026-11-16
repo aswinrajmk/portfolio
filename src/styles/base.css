@@ -373,6 +373,68 @@ main:focus {
   border-style: dashed;
 }
 
+/* Run and test outcomes (icon + text, never colour alone) */
+.outcome {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.outcome__icon {
+  width: 0.9em;
+  height: 0.9em;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.outcome--passed {
+  color: var(--live);
+}
+
+.outcome--failed {
+  color: var(--danger);
+}
+
+.outcome--healed {
+  color: var(--progress);
+}
+
+.outcome--skipped,
+.outcome--incomplete {
+  color: var(--planned);
+}
+
+.outcome--running {
+  color: var(--accent);
+}
+
+.outcome__pulse {
+  fill: currentColor;
+  stroke: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .outcome__pulse {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.counts {
+  white-space: normal;
+}
+
 /* Shared list styles */
 .ledger {
   list-style: none;

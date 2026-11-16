@@ -19,10 +19,20 @@ test.describe("QA dashboard", () => {
     ]);
   });
 
-  test("labels the run as sample data while no real pipeline feeds it", async ({ page }) => {
-    const run = page.locator("#latest-run");
-    await expect(run.locator("[data-tag=sample]")).toHaveText("Sample data");
-    await expect(run.locator(".run")).toHaveAttribute("data-source", "sample");
+  test("labels sample data, or links real runs to their report", async ({ page }) => {
+    const run = page.locator("#latest-run .run");
+    await expect(run).toBeVisible();
+    if ((await run.getAttribute("data-source")) === "sample") {
+      await expect(page.locator("#latest-run [data-tag=sample]")).toHaveText("Sample data");
+      await expect(run.getByRole("link", { name: /full run report/ })).toHaveCount(0);
+    } else {
+      await expect(page.locator("#latest-run [data-tag=sample]")).toHaveCount(0);
+      await expect(run.getByRole("link", { name: /full run report/ })).toHaveAttribute(
+        "href",
+        /\/dashboard\/run\/\?id=/,
+      );
+    }
+    await expect(run.locator("[data-run-status]")).toHaveText(/^(Running|Passed|Failed|Incomplete)$/);
   });
 
   test("shows a status badge for every skill", async ({ page }) => {
@@ -55,4 +65,12 @@ test.describe("QA dashboard", () => {
       await axe();
     });
   }
+});
+
+test.describe("Run report", () => {
+  test("explains when a run does not exist", async ({ page, problems }) => {
+    void problems;
+    await page.goto("/dashboard/run/?id=00000000-0000-0000-0000-000000000000");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Run not found");
+  });
 });

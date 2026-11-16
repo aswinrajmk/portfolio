@@ -12,7 +12,11 @@ export const test = base.extend<{ problems: PageProblems; axe: () => Promise<voi
   problems: async ({ page }, use) => {
     const problems: PageProblems = { consoleErrors: [], failedRequests: [] };
     page.on("console", (msg) => {
-      if (msg.type() === "error") problems.consoleErrors.push(msg.text());
+      if (msg.type() !== "error") return;
+      const source = msg.location().url;
+      const isApi404 =
+        msg.text().includes("status of 404") && source !== "" && new URL(source).pathname.startsWith("/api/");
+      if (!isApi404) problems.consoleErrors.push(msg.text());
     });
     page.on("pageerror", (error) => problems.consoleErrors.push(error.message));
     page.on("requestfailed", (request) => {
@@ -22,7 +26,11 @@ export const test = base.extend<{ problems: PageProblems; axe: () => Promise<voi
       problems.failedRequests.push(`${request.method()} ${request.url()} (${reason})`);
     });
     page.on("response", (response) => {
-      if (response.status() >= 400) problems.failedRequests.push(`${response.status()} ${response.url()}`);
+      // A 404 from the Results API ("no runs yet", "run not found") is an answer the UI handles, not a fault.
+      const expectedApi404 = response.status() === 404 && new URL(response.url()).pathname.startsWith("/api/");
+      if (response.status() >= 400 && !expectedApi404) {
+        problems.failedRequests.push(`${response.status()} ${response.url()}`);
+      }
     });
     await use(problems);
     expect.soft(problems.consoleErrors, "console errors").toEqual([]);
