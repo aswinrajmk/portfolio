@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { links, profile } from "../content/site";
+import { profile } from "../content/site";
 import { ThemeToggle } from "./ThemeToggle";
 
 export interface SectionRef {
@@ -63,10 +63,7 @@ export function Layout({
         </main>
       </div>
       <footer className="site-footer">
-        <p>
-          Hosted on Cloudflare Workers. Tested with Playwright on every pull request.{" "}
-          <a href={links.repo.href}>{links.repo.label}</a>
-        </p>
+        <p>Hosted on Cloudflare Workers. Tested with Playwright on every pull request.</p>
       </footer>
     </>
   );

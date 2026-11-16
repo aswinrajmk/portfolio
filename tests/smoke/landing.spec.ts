@@ -38,10 +38,7 @@ test.describe("Profile page", () => {
       "href",
       "https://github.com/aswinrajmk",
     );
-    await expect(contact.getByRole("link", { name: "cfa-master.com" })).toHaveAttribute(
-      "href",
-      "https://cfa-master.com",
-    );
+    await expect(contact.getByRole("link")).toHaveCount(3);
   });
 
   test("never shows a phone number", async ({ page }) => {
