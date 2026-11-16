@@ -156,6 +156,32 @@ No zone permissions are needed because the site uses the workers.dev URL.
 Actions step names the missing permission. Edit the token (My Profile → API Tokens → ⋯ → Edit),
 add that one permission, and re-run the job. The token value does not change when you edit it.
 
+## Telegram bot
+
+A private Telegram bot, served by this Worker at `POST /telegram/webhook`, gives the owner control from a phone:
+
+- **Ask about runs in plain language**, for example "Why did the copy test fail?". Claude (`claude-opus-5`) answers
+  with read-only tools over the Results API data.
+- **Change code in any of the three repos.** For example, "Rename the sign-in button to Log in" asks for **YES**.
+  The repo's `claude-change.yml` workflow then has Claude Code make the change on a branch. The workflow (not
+  Claude) runs the checks, pushes and opens a PR, and calls back `POST /api/bot/events`. The bot sends the PR
+  link and files.
+- **Merge or close PRs and start QA runs.** Each one needs YES. Merging is refused until every check passes.
+  PRs that touch `.github/`, wrangler config, migrations or `package.json` need **MERGE ANYWAY**.
+- **Run reports:** every finished run is posted to a Telegram channel, with the first failure screenshot.
+
+Safety:
+
+- Only the owner's Telegram user ID is answered, and the webhook needs Telegram's secret token header.
+- The model never sees tokens and cannot act on its own. Gated tools only create a pending action
+  (10-minute expiry), which Worker code runs after YES.
+- The bot's GitHub token has no Workflows permission, so bot changes can never alter CI.
+
+Shortcuts: `/latest`, `/runs`, `/pending`, `/reset`, `/help`. Setup is one interactive script, run by the
+owner in a terminal: `npm run bot:setup`. It checks each token, stores it as a Worker or GitHub secret without
+printing it, and registers the webhook. Bot code is in `worker/bot/`. Local tests (`tests/smoke/bot.spec.ts`)
+run against a stub of Telegram, GitHub and Anthropic (`tests/bot/stub-server.mjs`).
+
 ## Project rules
 
 See [CLAUDE.md](CLAUDE.md): synthetic data only, no secrets in git, and anything not backed by a

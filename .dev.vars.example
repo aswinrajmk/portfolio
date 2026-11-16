@@ -1,4 +1,15 @@
 # Local-only Worker secrets and variables. Copy to .dev.vars (gitignored).
-# `npm test` creates .dev.vars with a random RESULTS_API_TOKEN if it is missing.
+# `npm run dev` / `npm test` create .dev.vars with these keys if missing (scripts/ensure-dev-vars.mjs).
 RESULTS_API_TOKEN=change-me-local-only
+# Telegram bot: locally every external API points at the test stub (tests/bot/stub-server.mjs).
+TELEGRAM_BOT_TOKEN=local-test-bot-token
+TELEGRAM_WEBHOOK_SECRET=local-test-webhook-secret
+TELEGRAM_ALLOWED_USER_ID=4242
+TELEGRAM_REPORT_CHAT_ID=-100999
+ANTHROPIC_API_KEY=local-test-anthropic-key
+GITHUB_BOT_TOKEN=local-test-github-token
+BOT_EVENTS_TOKEN=local-test-events-token
+TELEGRAM_API_BASE=http://localhost:4199
+GITHUB_API_BASE=http://localhost:4199
+ANTHROPIC_BASE_URL=http://localhost:4199
 # ENVIRONMENT=preview   # uncomment to see the noindex header locally

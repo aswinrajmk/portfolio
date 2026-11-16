@@ -16,12 +16,20 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: isLocal
-    ? {
-        command:
-          "node scripts/ensure-dev-vars.mjs && npm run db:migrate:local && npm run build && npx vite preview --port 4173 --strictPort",
-        url: baseURL,
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-      }
+    ? [
+        {
+          // Stand-in for Telegram, GitHub and Anthropic so bot tests never reach real services.
+          command: "node tests/bot/stub-server.mjs",
+          url: "http://localhost:4199/__requests",
+          reuseExistingServer: !process.env.CI,
+        },
+        {
+          command:
+            "node scripts/ensure-dev-vars.mjs && npm run db:migrate:local && npm run build && npx vite preview --port 4173 --strictPort",
+          url: baseURL,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
+      ]
     : undefined,
 });
