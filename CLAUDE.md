@@ -38,8 +38,9 @@ All copy lives in `src/content/site.ts`; run data comes from `src/data/` (`getLa
 The Worker serves static assets, sets CSP and security headers, adds `X-Robots-Tag: noindex` when
 `ENVIRONMENT` is not "production" (set to "preview" via the `previews` block in `wrangler.jsonc`), and
 stubs `/api/*`. CI: each PR gets a Worker Preview (`wrangler preview --name pr-<n>`, URL commented on the
-PR) and a 21-test Playwright + axe smoke run against it; previews are deleted on close; pushes to `main`
-deploy production and run the same suite there. Lighthouse on the PR #1 preview: accessibility 100,
+PR); previews are deleted on close; pushes to `main` deploy production. The 21-test Playwright + axe smoke
+suite runs only on manual trigger (`smoke.yml`, target "production" or a PR number) at Aswin's request, so
+tests never block early-stage merges. Lighthouse on the PR #1 preview: accessibility 100,
 best practices 100, performance 98–100 (warm; one cold-start mobile run scored 87).
 
 Open issues:

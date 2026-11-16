@@ -182,7 +182,7 @@ export const pipeline: PipelineStage[] = [
   { id: "pr", label: "Pull request", detail: "Every change starts as a PR", status: "live" },
   { id: "actions", label: "GitHub Actions", detail: "Lint, type-check, build", status: "live" },
   { id: "preview", label: "Preview deploy", detail: "One Worker Preview per PR", status: "live" },
-  { id: "tests", label: "Tests", detail: "Playwright smoke on preview", status: "live" },
+  { id: "tests", label: "Tests", detail: "Playwright smoke, on demand", status: "live" },
   { id: "api", label: "Results API", detail: "Worker + D1 + R2", status: "planned" },
   { id: "dashboard", label: "Dashboard", detail: "This page, sample data", status: "in-progress" },
   { id: "telegram", label: "Telegram bot", detail: "Ask about runs, start a run", status: "planned" },

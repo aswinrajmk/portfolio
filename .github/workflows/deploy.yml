@@ -16,8 +16,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    outputs:
-      url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -39,26 +37,3 @@ jobs:
           [ -n "$url" ] || { echo "Could not find the workers.dev URL in the deploy output"; exit 1; }
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Production: $url" >> "$GITHUB_STEP_SUMMARY"
-
-  smoke:
-    needs: deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      BASE_URL: ${{ needs.deploy.outputs.url }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - name: Run smoke suite against production (asserts no noindex header)
-        run: npx playwright test
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
-        with:
-          name: playwright-report-production
-          path: playwright-report/
-          retention-days: 14

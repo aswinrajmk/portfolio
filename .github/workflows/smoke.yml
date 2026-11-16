@@ -1,0 +1,54 @@
+name: Smoke tests
+
+# Manual only for now. Pick production or a PR number; a PR number targets that PR's preview
+# and also asserts the X-Robots-Tag: noindex header.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: '"production" or a PR number (for example 3)'
+        required: true
+        default: production
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Resolve target URL
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          if [ "$TARGET" = "production" ]; then
+            echo "BASE_URL=https://portfolio.aswin-qa.workers.dev" >> "$GITHUB_ENV"
+          elif echo "$TARGET" | grep -Eq '^[0-9]+$'; then
+            echo "BASE_URL=https://pr-$TARGET-portfolio.aswin-qa.workers.dev" >> "$GITHUB_ENV"
+            echo "EXPECT_NOINDEX=1" >> "$GITHUB_ENV"
+          else
+            echo "target must be \"production\" or a PR number, got: $TARGET" && exit 1
+          fi
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Wait for the target to respond
+        run: |
+          for i in $(seq 1 12); do
+            curl -fsS -o /dev/null "$BASE_URL/" && exit 0
+            sleep 5
+          done
+          echo "No response from $BASE_URL" && exit 1
+      - name: Run smoke suite against ${{ inputs.target }}
+        run: npx playwright test
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ inputs.target }}
+          path: playwright-report/
+          retention-days: 14

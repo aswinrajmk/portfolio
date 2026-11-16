@@ -63,7 +63,7 @@ export function Layout({
         </main>
       </div>
       <footer className="site-footer">
-        <p>Hosted on Cloudflare Workers. Tested with Playwright on every pull request.</p>
+        <p>Hosted on Cloudflare Workers. Every pull request gets its own preview deployment.</p>
       </footer>
     </>
   );
