@@ -21,7 +21,11 @@ export function Requirements({ index }: { index: number }) {
       ) : data === null ? (
         <p className="note">The Results API could not be reached, so requirement coverage is unavailable right now.</p>
       ) : data.requirements.length === 0 ? (
-        <p className="note">No requirements recorded yet.</p>
+        <p className="note">
+          {data.issuesLoaded
+            ? "No requirements recorded yet."
+            : "GitHub could not be reached, so the requirements cannot be listed right now."}
+        </p>
       ) : (
         <>
           {!data.issuesLoaded && (
