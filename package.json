@@ -17,7 +17,8 @@
     "cf-typegen": "wrangler types worker/worker-configuration.d.ts",
     "deploy": "npm run build && wrangler deploy",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
-    "predev": "node scripts/ensure-dev-vars.mjs && npm run db:migrate:local"
+    "predev": "node scripts/ensure-dev-vars.mjs && npm run db:migrate:local",
+    "bot:setup": "node scripts/bot-setup.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.8.0",
