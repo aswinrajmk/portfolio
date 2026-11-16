@@ -57,7 +57,8 @@ jobs:
         run: |
           npx wrangler preview --name "$PREVIEW_NAME" \
             --message "PR #${{ github.event.pull_request.number }} @ ${GITHUB_SHA::7}" --json > preview.json
-          url=$(jq -er '.preview.urls[0]' preview.json) || { echo "Could not read preview URL:"; cat preview.json; exit 1; }
+          # Wrangler prints upload progress before the JSON document, so parse from the first "{" line.
+          url=$(sed -n '/^{/,$p' preview.json | jq -er '.preview.urls[0]') || { echo "Could not read preview URL:"; cat preview.json; exit 1; }
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Preview: $url" >> "$GITHUB_STEP_SUMMARY"
       - name: Comment preview URL on the PR
