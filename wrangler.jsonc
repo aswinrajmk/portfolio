@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aswin-qa",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  "upload_source_maps": true,
+  "workers_dev": true,
+  "assets": {
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+    // The Worker runs on every request so it can add headers (noindex on previews).
+    "run_worker_first": true,
+  },
+  "vars": {
+    "ENVIRONMENT": "production",
+  },
+  // Settings used by `wrangler preview` deployments (one per pull request).
+  "previews": {
+    "vars": {
+      "ENVIRONMENT": "preview",
+    },
+  },
+  "observability": {
+    "enabled": true,
+  },
+}
