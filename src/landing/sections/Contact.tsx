@@ -5,7 +5,6 @@ const ROWS = [
   { label: "Email", link: links.email },
   { label: "LinkedIn", link: links.linkedin },
   { label: "GitHub", link: links.github },
-  { label: "Product I own", link: links.product },
 ];
 
 export function Contact({ index }: { index: number }) {

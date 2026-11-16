@@ -84,8 +84,6 @@ export const links = {
   email: { label: "aswin.nrk@gmail.com", href: "mailto:aswin.nrk@gmail.com" },
   linkedin: { label: "linkedin.com/in/aswinrajmk", href: "https://www.linkedin.com/in/aswinrajmk" },
   github: { label: "github.com/aswinrajmk", href: "https://github.com/aswinrajmk" },
-  product: { label: "cfa-master.com", href: "https://cfa-master.com" },
-  repo: { label: "Source for this site", href: REPO },
 } satisfies Record<string, Link>;
 
 export const experience: ExperienceEntry[] = [
