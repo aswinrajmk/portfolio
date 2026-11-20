@@ -62,7 +62,7 @@ test.describe("QA dashboard", () => {
 
   test("marks strategy notes and decisions as drafts", async ({ page }) => {
     await expect(page.locator("#strategy [data-tag=draft]")).toBeVisible();
-    await expect(page.locator("#decisions [data-tag=draft]")).toHaveCount(3);
+    await expect(page.locator("#decisions [data-tag=draft]")).toHaveCount(4);
   });
 
   test("renders the pipeline diagram with an accessible name", async ({ page }) => {

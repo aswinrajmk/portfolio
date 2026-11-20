@@ -75,8 +75,18 @@ Finished runs are posted to a Telegram channel with the first failure screenshot
 Requirements are wealthlite issues labelled `requirement` (#1–#4 seeded from existing behaviour). Editing one
 triggers qa-tests `requirement.yml`: Claude Code drafts `@REQ-<n>` tests, runs them against live WealthLite,
 opens a PR and reports counts to Telegram. The dashboard's requirements matrix (`GET /api/requirements`) shows
-each requirement with its linked tests' latest results. n8n was considered and rejected: it needs paid or
-self-managed hosting and duplicates GitHub Actions plus the bot.
+each requirement with its linked tests' latest results. n8n was rejected for this GitHub flow, because it
+would duplicate GitHub Actions and the bot. It is used for the separate Jira flow below.
+
+## Jira story → test cases (2026-11-20, lives in wealthlite `automation/n8n/`)
+A self-hosted n8n workflow (`npx n8n` on Aswin's Mac) checks the WealthLite Jira project (`KAN`, Jira Free)
+every minute for new stories. A local Ollama model (`qwen3.5:2b`) analyses each one, and Aswin approves the
+analysis in Telegram (@aswinqabot, send-only from n8n). The approved analysis is posted as a Jira comment.
+The model then drafts 3–6 test cases for a second approval, and each approved case becomes a Jira "Test"
+issue linked "is tested by" to the story. Labels `ai-new` / `ai-analysis-approved` / `ai-done` / `ai-rejected`
+track progress. Dashboard: pipeline "Requirement" stage and ADR-004. There are no Jira links on the site,
+because the Jira site is private.
+Open issues: it runs only while the Mac and n8n are up; approval buttons work only from that Mac; no revise step.
 
 Open issues:
 - Free-form bot messages need Anthropic API credit (the owner's balance ran out on 2026-11-16).

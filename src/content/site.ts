@@ -196,7 +196,7 @@ export const evidence: EvidenceSkill[] = [
 ];
 
 export const pipeline: PipelineStage[] = [
-  { id: "requirement", label: "Requirement", detail: "Issue → tests drafted by AI", status: "live" },
+  { id: "requirement", label: "Requirement", detail: "Issue or Jira story → AI tests", status: "live" },
   { id: "change", label: "App change", detail: "Push to WealthLite main", status: "live" },
   { id: "deploy", label: "Deploy", detail: "GitHub Actions to Workers", status: "live" },
   { id: "trigger", label: "Trigger", detail: "Deploy event to qa-tests", status: "live" },
@@ -258,6 +258,16 @@ export const decisions: { draft: boolean; items: Decision[] } = {
       decision: "Each PR gets its own Worker Preview with its own bindings; tests write only to those.",
       consequences:
         "Tests can create and delete data freely. Previews are deleted when the PR closes to stay under the free plan's 100-preview limit.",
+    },
+    {
+      id: "ADR-004",
+      title: "Local model and human approval for Jira test cases",
+      context:
+        "New Jira stories need an early requirement review and a small set of manual test cases, without sending story text to a paid API.",
+      decision:
+        "A self-hosted n8n workflow picks up new stories every minute. A local Qwen model on Ollama analyses each story and drafts test cases. Each step waits for approval in Telegram before anything is written to Jira.",
+      consequences:
+        "Story text stays on my machine and model calls cost nothing. Approved cases become Jira Test issues linked to the story. The small model needs clear acceptance criteria, and the flow only runs while that machine is on.",
     },
   ],
 };
