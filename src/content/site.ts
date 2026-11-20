@@ -145,7 +145,7 @@ export const toolbox: SkillGroup[] = [
     items: ["Playwright", "WebdriverIO", "Appium", "Selenium WebDriver", "TestNG", "Cucumber", "Mocha"],
   },
   { label: "Languages", items: ["TypeScript", "JavaScript", "Java", "SQL"] },
-  { label: "API and monitoring", items: ["Postman", "New Relic"] },
+  { label: "API and monitoring", items: ["Postman", "New Relic", "Tsuga", "Amplitude"] },
   { label: "CI/CD and version control", items: ["GitLab CI/CD", "Jenkins", "Git", "Bitbucket", "Maven", "Docker"] },
   { label: "Test management", items: ["Jira", "Confluence", "Xray", "Zephyr", "Redmine"] },
   { label: "Business systems", items: ["IBM Sterling OMS", "Cybersource"] },
