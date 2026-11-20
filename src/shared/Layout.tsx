@@ -62,9 +62,6 @@ export function Layout({
           {children}
         </main>
       </div>
-      <footer className="site-footer">
-        <p>Hosted on Cloudflare Workers. Every pull request gets its own preview deployment.</p>
-      </footer>
     </>
   );
 }
