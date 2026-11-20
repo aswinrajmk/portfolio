@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { pipeline, type Status } from "../content/site";
+import { pipeline as defaultStages, type PipelineStage, type Status } from "../content/site";
 
 const NODE_W = 200;
 const NODE_H = 76;
@@ -35,7 +35,18 @@ function connector(from: Placed, to: Placed) {
   return `M${x} ${from.y + NODE_H} V${to.y - 6}`;
 }
 
-export function PipelineDiagram({ columns, className }: { columns: number; className: string }) {
+export function PipelineDiagram({
+  columns,
+  className,
+  stages = defaultStages,
+  title = "Pipeline from a requirement to the live report and Telegram",
+}: {
+  columns: number;
+  className: string;
+  stages?: PipelineStage[];
+  title?: string;
+}) {
+  const pipeline = stages;
   const id = `pipeline${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const rows = Math.ceil(pipeline.length / columns);
   const width = PAD * 2 + columns * NODE_W + (columns - 1) * GAP_X;
@@ -45,7 +56,7 @@ export function PipelineDiagram({ columns, className }: { columns: number; class
 
   return (
     <svg className={className} viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={`${id}-title ${id}-desc`}>
-      <title id={`${id}-title`}>Pipeline from a requirement to the live report and Telegram</title>
+      <title id={`${id}-title`}>{title}</title>
       <desc id={`${id}-desc`}>{description}</desc>
       <defs>
         <marker id={`${id}-arrow`} viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">

@@ -12,6 +12,7 @@ test.describe("QA dashboard", () => {
     expect(await sectionHeadings(page)).toEqual([
       "Latest pipeline run",
       "Requirements coverage",
+      "Jira to test cases: local AI agent",
       "Skills and evidence",
       "Pipeline architecture",
       "Test strategy",
@@ -63,6 +64,23 @@ test.describe("QA dashboard", () => {
   test("marks strategy notes and decisions as drafts", async ({ page }) => {
     await expect(page.locator("#strategy [data-tag=draft]")).toBeVisible();
     await expect(page.locator("#decisions [data-tag=draft]")).toHaveCount(4);
+  });
+
+  test("explains the Jira to test cases flow with its tools and a real example", async ({ page }) => {
+    const section = page.locator("#jira-agent");
+    await expect(section.locator("[data-status=live]").first()).toBeVisible();
+    await expect(
+      section.getByRole("img", { name: "Flow from a new Jira story to approved, linked Jira Test issues" }),
+    ).toBeVisible();
+    await expect(section.locator(".agent-steps > li")).toHaveCount(6);
+    for (const tool of ["n8n (self-hosted)", "Ollama + Qwen 3.5", "Jira Cloud REST API", "Telegram Bot API"]) {
+      await expect(section.getByText(tool, { exact: true })).toBeVisible();
+    }
+    await expect(section.getByRole("article", { name: "Example from a real run" })).toBeVisible();
+    await expect(section.getByRole("link", { name: "Workflow and build script in wealthlite" })).toHaveAttribute(
+      "href",
+      "https://github.com/aswinrajmk/wealthlite/tree/main/automation/n8n",
+    );
   });
 
   test("renders the pipeline diagram with an accessible name", async ({ page }) => {

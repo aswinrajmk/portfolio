@@ -60,6 +60,7 @@ export interface Decision {
 
 const REPO = "https://github.com/aswinrajmk/portfolio";
 const QA_REPO = "https://github.com/aswinrajmk/qa-tests";
+const APP_REPO = "https://github.com/aswinrajmk/wealthlite";
 
 export const profile = {
   name: "Aswin Raj",
@@ -205,6 +206,89 @@ export const pipeline: PipelineStage[] = [
   { id: "dashboard", label: "Live report", detail: "This dashboard", status: "live" },
   { id: "telegram", label: "Telegram bot", detail: "Reports, runs, code changes", status: "live" },
 ];
+
+// Jira story → reviewed test cases, run by a self-hosted n8n workflow and a local model.
+// The example is copied from a real run on 2026-11-20 (story KAN-6). The Jira site is private, so nothing links to it.
+export const jiraAgent = {
+  source: { label: "Workflow and build script in wealthlite", href: `${APP_REPO}/tree/main/automation/n8n` },
+  stages: [
+    { id: "story", label: "Jira story", detail: "New story in Jira Cloud", status: "live" },
+    { id: "poll", label: "n8n trigger", detail: "JQL search every minute", status: "live" },
+    { id: "analyse", label: "AI analysis", detail: "Ollama + Qwen, on my Mac", status: "live" },
+    { id: "approve-1", label: "Approval 1", detail: "Approve or reject in Telegram", status: "live" },
+    { id: "comment", label: "Jira comment", detail: "Approved analysis on story", status: "live" },
+    { id: "draft", label: "AI test cases", detail: "Minimal set, core coverage", status: "live" },
+    { id: "approve-2", label: "Approval 2", detail: "Approve or reject in Telegram", status: "live" },
+    { id: "create", label: "Jira Test issues", detail: "Created and linked to story", status: "live" },
+  ] satisfies PipelineStage[],
+  steps: [
+    {
+      title: "A story lands in Jira",
+      body: "I write a story in Jira Cloud: a user story plus Given/When/Then acceptance criteria. Every minute, an n8n Schedule Trigger runs a JQL search through the Jira REST API. When it finds a new story, it adds an ai-new label first, so no story is ever processed twice.",
+    },
+    {
+      title: "A local AI agent reviews the requirement",
+      body: "n8n sends the story to Qwen 3.5 (2B), running locally on Ollama. A JSON schema forces structured output: a one-line summary, ambiguities and risks. The story never leaves my machine and there is no per-call API cost.",
+    },
+    {
+      title: "I approve the analysis (human in the loop)",
+      body: "The analysis arrives in Telegram with Approve and Reject buttons. An n8n Wait node pauses the run, for up to 24 hours, until I decide. If I approve, the analysis is posted to the story as a Jira comment. If I reject, the story gets an ai-rejected label so it can be reworked.",
+    },
+    {
+      title: "The agent designs the minimal test set",
+      body: "The agent drafts the smallest set of cases that covers the core behaviour: one positive case per acceptance criterion, plus at most two negative or edge cases. That is 3–6 cases, each with the criterion it covers, preconditions, steps and one expected result.",
+    },
+    {
+      title: "I approve the test cases",
+      body: "The numbered list comes back to Telegram for a second review. Nothing is written to Jira until I approve. Each button is tied to its step, so an old Approve button cannot approve the wrong stage.",
+    },
+    {
+      title: "Test issues are created and traced",
+      body: "n8n creates one Jira Test issue per case through the REST API, with the description in Atlassian Document Format. It links each one to the story as 'is tested by' and labels it ai-generated plus its case type. It then marks the story ai-done and sends me the links.",
+    },
+  ],
+  tools: [
+    {
+      name: "n8n (self-hosted)",
+      detail: "Workflow orchestration: Schedule Trigger, HTTP Request, Code (JavaScript), Wait, IF and Telegram nodes.",
+    },
+    {
+      name: "Ollama + Qwen 3.5",
+      detail:
+        "Local LLM inference. Structured JSON output, and prompts written for requirement review and test design.",
+    },
+    {
+      name: "Jira Cloud REST API",
+      detail: "JQL search, issue creation, issue links, comments, Atlassian Document Format, a custom Test work type.",
+    },
+    { name: "Telegram Bot API", detail: "Approval prompts with inline buttons that resume the paused workflow." },
+    {
+      name: "Workflow as code",
+      detail: "A Python script builds the workflow, deploys it through the n8n REST API and keeps the JSON in Git.",
+    },
+    {
+      name: "Test design",
+      detail: "Requirement review, acceptance criteria mapped to test cases, minimal risk-based coverage.",
+    },
+  ],
+  example: {
+    story: "Sign out from the portfolio page",
+    criteria: [
+      'Given I am signed in, when I click "Sign out", then I return to the login page',
+      "Given I have signed out, when I open /portfolio directly, then I am sent to the login page",
+      "Given I have signed out, when I press the browser back button, then holdings are not shown",
+    ],
+    flagged:
+      "'Nobody else can see my holdings on a shared computer' is vague: it could mean clearing the cache, clearing cookies or deleting browser data.",
+    cases: [
+      "Sign out redirects to login (positive, criterion 1)",
+      "Direct navigation after sign out redirects to login (positive, criterion 2)",
+      "Back button hides holdings (positive, criterion 3)",
+    ],
+    review:
+      "Looking back at this run, two of the drafted preconditions contradict themselves ('has signed out and is logged in'). The 2B model is fast and free, but its output needs a human check. That is why every step waits for approval, and why a revise step is next on the list.",
+  },
+};
 
 export const strategy = {
   draft: true,

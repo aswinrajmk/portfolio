@@ -381,3 +381,146 @@
   color: var(--muted);
   font-weight: 400;
 }
+
+/* Jira to test cases: local AI agent */
+.agent__subhead {
+  margin: var(--space-6) 0 var(--space-3);
+}
+
+.agent-steps {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: agent-step;
+}
+
+@media (min-width: 48rem) {
+  .agent-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.agent-steps__item {
+  position: relative;
+  padding: var(--space-4) var(--space-4) var(--space-4) calc(var(--space-4) + 2.25rem);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  counter-increment: agent-step;
+}
+
+.agent-steps__item::before {
+  content: counter(agent-step);
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1.5px solid var(--accent);
+  border-radius: 50%;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  line-height: 1.3rem;
+  text-align: center;
+}
+
+.agent-steps__item h4 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--step-0);
+}
+
+.agent-steps__item p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.agent-tools {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+@media (min-width: 48rem) {
+  .agent-tools {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.agent-tools__item {
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+}
+
+.agent-tools__item dt {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  font-weight: 600;
+}
+
+.agent-tools__item dd {
+  margin: var(--space-1) 0 0;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.agent-example {
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--rule-strong);
+  border-radius: var(--radius);
+}
+
+.agent-example__story {
+  margin: 0;
+  font-weight: 600;
+}
+
+.agent-example__label {
+  margin-right: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  font-weight: 400;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.agent-example__criteria {
+  margin: var(--space-2) 0 0;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.agent-example dl {
+  margin: 0;
+}
+
+.agent-example dt {
+  margin-top: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.agent-example dd {
+  margin: var(--space-1) 0 0;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.agent-example dd ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.agent__source {
+  margin-top: var(--space-4);
+}
