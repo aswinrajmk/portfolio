@@ -296,13 +296,30 @@ test.describe("Results API: AI evals (local only)", () => {
       201,
     );
 
+    // A draft for a story without acceptance criteria is listed, but kept out of the model's average.
+    expect(
+      (
+        await post({
+          kind: "live",
+          storyKey: "KAN-26",
+          score: 100,
+          summary: `⚠ Story has no acceptance criteria ${stamp}`,
+          details: { storyIssue: "Story has no acceptance criteria: fix the story first" },
+        })
+      ).status(),
+    ).toBe(201);
+
     const body = (await (await request.get("/api/ai-evals")).json()) as {
       golden: { latest: { mean: number; perStory: Record<string, number> } | null };
-      live: { count: number; recent: { summary: string }[] };
+      live: { count: number; storyIssues: number; recent: { summary: string; storyIssue: string | null }[] };
       automation: { engine: string; runs: number; draft: number }[];
     };
     expect(body.golden.latest).toMatchObject({ mean: Math.round(mean * 10) / 10, perStory: { "G-01": 40 } });
     expect(body.live.recent.map((d) => d.summary)).toContain(`Score 90% ${stamp}`);
+    expect(body.live.storyIssues).toBeGreaterThan(0);
+    expect(body.live.recent.find((d) => d.summary.endsWith(`criteria ${stamp}`))?.storyIssue).toBe(
+      "Story has no acceptance criteria: fix the story first",
+    );
     expect(body.automation.find((e) => e.engine === "local")?.draft).toBeGreaterThan(0);
     expect(body.automation.map((e) => e.engine)).toEqual(["claude", "local"]);
   });
