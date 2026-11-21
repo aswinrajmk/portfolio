@@ -54,7 +54,7 @@ export async function prepareRun(env: Env, chatId: string, rawFilter: unknown): 
   if (filter === null)
     return {
       pending: null,
-      message: "That filter is not allowed. Use tags or words, for example @REQ-3 or login.",
+      message: "That filter is not allowed. Use tags or words, for example @KAN-10, @smoke or login.",
     };
   const pending = await createPending(
     env.DB,

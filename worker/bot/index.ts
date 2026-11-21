@@ -38,12 +38,12 @@ const HELP = [
   "• Rename the sign-in button to Log in (wealthlite)",
   "• Update the copy test to expect Log in (qa-tests)",
   "• Which requirements are failing?",
-  "• Run the tests for requirement 3",
+  "• Run the tests for story KAN-10",
   "• Merge wealthlite PR 12",
   "",
   "<b>Shortcuts</b> (work without AI credit):",
   "/latest · /runs · /reqs (requirement coverage)",
-  "/run [filter], e.g. /run @REQ-3 or /run login",
+  "/run [filter], e.g. /run @KAN-10, /run @smoke or /run login",
   "/merge &lt;repo&gt; &lt;number&gt;, e.g. /merge qa-tests 12",
   "/pending · /reset · /help",
   "",
@@ -203,13 +203,13 @@ async function onText(env: Env, cfg: BotConfig, telegram: Telegram, chatId: stri
           : q.state === "failing"
             ? `${failing} of ${q.tests.length} tests failing`
             : `${q.tests.length} tests passing`;
-      const title = q.title ? esc(q.title) : "(issue not found)";
-      const link = q.url ? `<a href="${esc(q.url)}">#${q.number}</a>` : `#${q.number}`;
-      return `${REQ_ICON[q.state]} ${link} ${title}: ${detail}${q.issueState === "closed" ? " (closed)" : ""}`;
+      const title = q.title ? esc(q.title) : "(story not found)";
+      const link = q.url ? `<a href="${esc(q.url)}">${q.key}</a>` : q.key;
+      return `${REQ_ICON[q.state]} ${link} ${title}: ${detail}${q.issueState === "closed" ? " (done)" : ""}`;
     });
     const body = [
-      lines.length ? lines.join("\n") : "No requirements yet. Open a wealthlite issue with the requirement label.",
-      issuesLoaded ? "" : "\n⚠️ GitHub could not be reached, so titles may be missing.",
+      lines.length ? lines.join("\n") : "No stories yet. Create a Story in Jira project KAN.",
+      issuesLoaded ? "" : "\n⚠️ Jira could not be reached, so titles may be missing.",
       `\n<a href="${cfg.publicUrl}/dashboard/#requirements">Open the coverage matrix</a>`,
     ].join("");
     return void (await telegram.sendMessage(chatId, body));

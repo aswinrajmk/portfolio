@@ -128,10 +128,10 @@ test.describe("Results API: write (local only)", () => {
 
 test.describe("Results API: requirements (local only)", () => {
   test.skip(!isLocal, "Writes run only against the local server");
-  // Requirement issues come from the stub server (tests/bot/stub-server.mjs): #1 open, #2 closed.
+  // Jira stories come from the stub server (tests/bot/stub-server.mjs): KAN-1 open, KAN-2 done.
 
   interface Req {
-    number: number;
+    key: string;
     title: string;
     url: string | null;
     issueState: string | null;
@@ -139,10 +139,10 @@ test.describe("Results API: requirements (local only)", () => {
     tests: { title: string; status: string }[];
   }
 
-  test("links tagged tests to requirement issues and keeps each test's latest result", async ({ request }) => {
+  test("links tagged tests to Jira stories and keeps each test's latest result", async ({ request }) => {
     const auth = { Authorization: `Bearer ${localToken()}` };
     const stamp = Date.now();
-    const orphan = 9000 + (stamp % 1000);
+    const orphan = `KAN-${9000 + (stamp % 1000)}`;
     const run = async (filter?: string) => {
       const response = await request.post("/api/runs", {
         headers: auth,
@@ -157,8 +157,10 @@ test.describe("Results API: requirements (local only)", () => {
       });
 
     const full = await run();
-    expect((await result(full, "signs in", "passed", ["@REQ-1", "@smoke"])).status()).toBe(201);
-    expect((await result(full, "orphan check", "failed", [`@REQ-${orphan}`])).status()).toBe(201);
+    expect((await result(full, "signs in", "passed", ["@KAN-1", "@KAN-101", "@smoke"])).status()).toBe(201);
+    expect((await result(full, "orphan check", "failed", [`@${orphan}`, "@KAN-102", "@regression"])).status()).toBe(
+      201,
+    );
     expect((await result(full, "untagged", "passed")).status()).toBe(201);
     expect((await result(full, "bad tag", "passed", ["no-at-sign"])).status()).toBe(400);
     await request.post(`/api/runs/${full}/finish`, { headers: auth });
@@ -170,25 +172,24 @@ test.describe("Results API: requirements (local only)", () => {
     };
     let body = await read();
     expect(body.issuesLoaded).toBe(true);
-    const signIn = body.requirements.find((r) => r.number === 1);
+    const signIn = body.requirements.find((r) => r.key === "KAN-1");
     expect(signIn).toMatchObject({ title: "Sign in with email and password", issueState: "open", state: "passing" });
     expect(signIn?.tests.map((t) => t.title)).toContain(`signs in ${stamp}`);
-    expect(body.requirements.find((r) => r.number === 2)).toMatchObject({ issueState: "closed", state: "untested" });
-    expect(body.requirements.find((r) => r.number === 3)).toBeUndefined(); // a pull request, not an issue
-    expect(body.requirements.find((r) => r.number === orphan)).toMatchObject({
+    expect(body.requirements.find((r) => r.key === "KAN-2")).toMatchObject({ issueState: "closed", state: "untested" });
+    // The Test issue tag never becomes a row of its own: only the first Jira tag (the story) groups a test.
+    expect(body.requirements.find((r) => r.key === "KAN-101")).toBeUndefined();
+    expect(body.requirements.find((r) => r.key === orphan)).toMatchObject({
       title: "",
       url: null,
       state: "failing",
     });
 
     // A filtered rerun of the orphan's test replaces its result, and the run records the filter.
-    const rerun = await run(`@REQ-${orphan}`);
-    await result(rerun, "orphan check", "passed", [`@REQ-${orphan}`]);
+    const rerun = await run(`@${orphan}`);
+    await result(rerun, "orphan check", "passed", [`@${orphan}`, "@KAN-102", "@regression"]);
     await request.post(`/api/runs/${rerun}/finish`, { headers: auth });
-    expect(((await (await request.get(`/api/runs/${rerun}`)).json()) as { filter: string }).filter).toBe(
-      `@REQ-${orphan}`,
-    );
+    expect(((await (await request.get(`/api/runs/${rerun}`)).json()) as { filter: string }).filter).toBe(`@${orphan}`);
     body = await read();
-    expect(body.requirements.find((r) => r.number === orphan)?.state).toBe("passing");
+    expect(body.requirements.find((r) => r.key === orphan)?.state).toBe("passing");
   });
 });
