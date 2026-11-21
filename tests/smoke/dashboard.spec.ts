@@ -1,28 +1,74 @@
-import { expect, sectionHeadings, test } from "./fixtures";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
-test.describe("QA dashboard", () => {
-  test.beforeEach(async ({ page, problems }) => {
+const TABS = {
+  overview: ["Release readiness", "Latest pipeline run"],
+  quality: ["Quality metrics and release readiness", "Requirements coverage"],
+  "ai-workflow": ["Jira to automated tests: AI agents with approvals", "Pipeline architecture"],
+  "how-i-work": ["Skills and evidence", "Test strategy", "Decisions", "AI agents and leadership"],
+} as const;
+type TabId = keyof typeof TABS;
+
+async function open(page: Page, hash: TabId | string = "overview") {
+  // A hash-only change on the same page is a same-document navigation, which has no HTTP response.
+  const response = await page.goto(`/dashboard/#${hash}`);
+  if (response) expect(response.status()).toBe(200);
+}
+
+test.describe("QA dashboard tabs", () => {
+  test.beforeEach(async ({ problems }) => {
     void problems;
-    const response = await page.goto("/dashboard/");
-    expect(response?.status()).toBe(200);
   });
 
-  test("has the right title and every section in order", async ({ page }) => {
+  test("has the right title, four tabs, and the right sections in each", async ({ page }) => {
+    await open(page);
     await expect(page).toHaveTitle("QA dashboard · Aswin Raj");
-    expect(await sectionHeadings(page)).toEqual([
-      "Latest pipeline run",
-      "Quality metrics and release readiness",
-      "Requirements coverage",
-      "Jira to automated tests: AI agents with approvals",
-      "Skills and evidence",
-      "Pipeline architecture",
-      "Test strategy",
-      "Decisions",
-      "AI agents and leadership",
-    ]);
+    await expect(page.getByRole("tab")).toHaveText(["Overview", "Quality", "AI workflow", "How I work"]);
+    for (const [tab, headings] of Object.entries(TABS)) {
+      await open(page, tab);
+      await expect(page.getByRole("tab", { selected: true })).toHaveAttribute("href", `#${tab}`);
+      await expect(page.getByRole("tabpanel").getByRole("heading", { level: 2 })).toHaveText([...headings]);
+    }
+  });
+
+  test("opens Overview by default, with the verdict and KPIs in the first screen", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/dashboard/");
+    await expect(page.getByRole("tab", { selected: true })).toHaveText("Overview");
+    const verdict = page.locator("#readiness [data-verdict]");
+    await expect(verdict).toHaveText(/Release readiness: (GO|CAUTION|NO-GO)/);
+    await expect(verdict).toBeInViewport();
+    await expect(page.locator("#readiness .kpi").first()).toBeInViewport();
+    await expect(page.getByRole("link", { name: /See all quality detail/ })).toHaveAttribute("href", "#quality");
+  });
+
+  test("older links to a section open its tab and scroll to it", async ({ page }) => {
+    for (const [hash, tab] of [
+      ["metrics", "Quality"],
+      ["requirements", "Quality"],
+      ["jira-agent", "AI workflow"],
+      ["evidence", "How I work"],
+    ] as const) {
+      await open(page, hash);
+      await expect(page.getByRole("tab", { selected: true })).toHaveText(tab);
+      await expect(page.locator(`#${hash}`)).toBeInViewport();
+    }
+  });
+
+  test("tabs work with the keyboard and with back and forward", async ({ page }) => {
+    await open(page);
+    await page.getByRole("tab", { name: "Overview" }).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("tab", { selected: true })).toHaveText("Quality");
+    await expect(page.getByRole("tab", { name: "Quality" })).toBeFocused();
+    await page.keyboard.press("End");
+    await expect(page.getByRole("tab", { selected: true })).toHaveText("How I work");
+    await page.goBack();
+    await expect(page.getByRole("tab", { selected: true })).toHaveText("Quality");
   });
 
   test("labels sample data, or links real runs to their report", async ({ page }) => {
+    await open(page);
     const run = page.locator("#latest-run .run");
     await expect(run).toBeVisible();
     if ((await run.getAttribute("data-source")) === "sample") {
@@ -38,36 +84,29 @@ test.describe("QA dashboard", () => {
     await expect(run.locator("[data-run-status]")).toHaveText(/^(Running|Passed|Failed|Incomplete)$/);
   });
 
-  test("shows a status badge for every skill", async ({ page }) => {
-    const rows = page.locator("#evidence tbody tr");
-    await expect(rows).toHaveCount(9);
-    for (const row of await rows.all()) {
-      await expect(row.locator("[data-status]")).toHaveText(/^(Live|In progress|Planned)$/);
+  test("shows quality metrics with a release verdict, KPIs and an accessible trend", async ({ page }) => {
+    await open(page, "quality");
+    const section = page.locator("#metrics");
+    await expect(section.locator("[data-verdict]")).toHaveText(/Release readiness: (GO|CAUTION|NO-GO)/);
+    for (const kpi of ["Pass rate", "Flaky tests", "Healed locators to fix", "Automation coverage"]) {
+      await expect(section.locator(".kpi dt", { hasText: kpi })).toBeVisible();
     }
+    const trend = section.getByRole("group", { name: /^Pass rate per run\./ });
+    if (await trend.count()) await expect(trend).toBeVisible();
+    else await expect(section.getByText("The pass-rate trend appears after a few more suite runs.")).toBeVisible();
   });
 
   test("shows requirement coverage with a state for every requirement, or says why not", async ({ page }) => {
+    await open(page, "quality");
     const section = page.locator("#requirements");
     await expect(section.locator("table, .note").first()).toBeVisible();
-    const rows = section.locator("tbody tr");
-    for (const row of await rows.all()) {
+    for (const row of await section.locator("tbody tr").all()) {
       await expect(row.locator("[data-requirement-state]")).toHaveText(/^(Passing|Failing|No tests yet)$/);
     }
   });
 
-  test("never marks a skill live without an evidence link", async ({ page }) => {
-    const liveRows = page.locator("#evidence tbody tr", { has: page.locator("[data-status=live]") });
-    for (const row of await liveRows.all()) {
-      await expect(row.getByRole("link")).toHaveCount(1);
-    }
-  });
-
-  test("marks strategy notes and decisions as drafts", async ({ page }) => {
-    await expect(page.locator("#strategy [data-tag=draft]")).toBeVisible();
-    await expect(page.locator("#decisions [data-tag=draft]")).toHaveCount(4);
-  });
-
   test("explains the Jira to automated tests flow with its tools and a real example", async ({ page }) => {
+    await open(page, "ai-workflow");
     const section = page.locator("#jira-agent");
     await expect(section.locator("[data-status=live]").first()).toBeVisible();
     await expect(
@@ -75,6 +114,9 @@ test.describe("QA dashboard", () => {
         name: "Flow from a new Jira story to approved Jira Test issues and automated Playwright tests",
       }),
     ).toBeVisible();
+    // Steps and tools start folded, to keep the tab short.
+    await expect(section.locator(".agent-steps")).toBeHidden();
+    for (const summary of await section.locator(".agent__more > summary").all()) await summary.click();
     await expect(section.locator(".agent-steps > li")).toHaveCount(9);
     for (const tool of [
       "n8n (self-hosted)",
@@ -86,7 +128,6 @@ test.describe("QA dashboard", () => {
       await expect(section.getByText(tool, { exact: true })).toBeVisible();
     }
     const example = section.getByRole("article", { name: "Example from a real run" });
-    await expect(example).toBeVisible();
     await expect(example.getByRole("link", { name: "qa-tests PR #8" })).toHaveAttribute(
       "href",
       "https://github.com/aswinrajmk/qa-tests/pull/8",
@@ -95,31 +136,33 @@ test.describe("QA dashboard", () => {
       "href",
       "https://github.com/aswinrajmk/wealthlite/tree/main/automation/n8n",
     );
-  });
-
-  test("shows quality metrics with a release verdict, KPIs and an accessible trend", async ({ page }) => {
-    const section = page.locator("#metrics");
-    await expect(section.getByRole("heading", { name: "Quality metrics and release readiness" })).toBeVisible();
-    await expect(section.locator("[data-verdict]")).toHaveText(/Release readiness: (GO|CAUTION|NO-GO)/);
-    for (const kpi of ["Pass rate", "Flaky tests", "Healed locators to fix", "Automation coverage"]) {
-      await expect(section.locator(".kpi dt", { hasText: kpi })).toBeVisible();
-    }
-    const trend = section.getByRole("group", { name: /^Pass rate per run\./ });
-    if (await trend.count()) await expect(trend).toBeVisible();
-    else await expect(section.getByText("The pass-rate trend appears after a few more suite runs.")).toBeVisible();
-  });
-
-  test("renders the pipeline diagram with an accessible name", async ({ page }) => {
     await expect(
       page.getByRole("img", { name: "Pipeline from a requirement to the live report and Telegram" }),
     ).toBeVisible();
   });
 
+  test("shows a status badge and an evidence link for every live skill", async ({ page }) => {
+    await open(page, "how-i-work");
+    const rows = page.locator("#evidence tbody tr");
+    await expect(rows).toHaveCount(9);
+    for (const row of await rows.all()) {
+      await expect(row.locator("[data-status]")).toHaveText(/^(Live|In progress|Planned)$/);
+    }
+    const liveRows = page.locator("#evidence tbody tr", { has: page.locator("[data-status=live]") });
+    for (const row of await liveRows.all()) await expect(row.getByRole("link")).toHaveCount(1);
+    await expect(page.locator("#strategy [data-tag=draft]")).toBeVisible();
+    await expect(page.locator("#decisions [data-tag=draft]")).toHaveCount(4);
+  });
+
   for (const colorScheme of ["light", "dark"] as const) {
-    test(`has no serious accessibility violations (${colorScheme})`, async ({ page, axe }) => {
-      await page.emulateMedia({ colorScheme });
-      await axe();
-    });
+    for (const tab of Object.keys(TABS) as TabId[]) {
+      test(`${tab} tab has no serious accessibility violations (${colorScheme})`, async ({ page, axe }) => {
+        await page.emulateMedia({ colorScheme });
+        await open(page, tab);
+        await expect(page.getByRole("tabpanel").getByRole("heading", { level: 2 }).first()).toBeVisible();
+        await axe();
+      });
+    }
   }
 });
 

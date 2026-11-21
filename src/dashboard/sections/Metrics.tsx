@@ -23,15 +23,23 @@ function duration(msValue: number | null): string {
   return m < 90 ? `${m} min` : `${(m / 60).toFixed(1)} h`;
 }
 
-export function Metrics({ index }: { index: number }) {
+/** "summary" is the Overview tab: verdict, KPIs and the trend. "full" adds the run table and the detail lists. */
+export function Metrics({ index, variant = "full" }: { index: number; variant?: "summary" | "full" }) {
   const data = usePolled<MetricsResponse | null>(load, nextDelay);
+  const summary = variant === "summary";
   return (
-    <Section id="metrics" index={index} title="Quality metrics and release readiness">
-      <p className="lede">
-        What I watch as a QA lead before a release, computed from every stored run (last {data?.window.runs ?? 30} runs,{" "}
-        {data?.window.days ?? 30} days) and from Jira. Flaky tests are bugs: they get fixed or quarantined with an
-        owner, never retried until green.
-      </p>
+    <Section
+      id={summary ? "readiness" : "metrics"}
+      index={index}
+      title={summary ? "Release readiness" : "Quality metrics and release readiness"}
+    >
+      {!summary && (
+        <p className="lede">
+          What I watch as a QA lead before a release, computed from every stored run (last {data?.window.runs ?? 30}{" "}
+          runs, {data?.window.days ?? 30} days) and from Jira. Flaky tests are bugs: they get fixed or quarantined with
+          an owner, never retried until green.
+        </p>
+      )}
       {data === undefined ? (
         <p className="note">Loading metrics…</p>
       ) : data === null ? (
@@ -40,8 +48,16 @@ export function Metrics({ index }: { index: number }) {
         <>
           <Readiness readiness={data.readiness} />
           <Kpis data={data} />
-          <Trend points={data.trend.filter((p) => p.suite !== "partial")} />
-          <Lists data={data} />
+          <Trend points={data.trend.filter((p) => p.suite !== "partial")} table={!summary} />
+          {summary ? (
+            <p className="section__more">
+              <a href="#quality">
+                See all quality detail <span aria-hidden="true">→</span>
+              </a>
+            </p>
+          ) : (
+            <Lists data={data} />
+          )}
         </>
       )}
     </Section>
@@ -109,7 +125,7 @@ const SERIES = [
   { suite: "regression", label: "Regression" },
 ] as const;
 
-function Trend({ points }: { points: TrendPoint[] }) {
+function Trend({ points, table }: { points: TrendPoint[]; table: boolean }) {
   const [hover, setHover] = useState<number | null>(null);
   if (points.length < 2) return <p className="note">The pass-rate trend appears after a few more suite runs.</p>;
 
@@ -204,38 +220,45 @@ function Trend({ points }: { points: TrendPoint[] }) {
           </div>
         )}
       </div>
-      <details className="trend__table">
-        <summary>Show the runs as a table</summary>
-        <div className="table-wrap" tabIndex={0} role="region" aria-label="Runs in the trend">
-          <table className="recent">
-            <thead>
-              <tr>
-                <th scope="col">Started</th>
-                <th scope="col">Suite</th>
-                <th scope="col">Pass rate</th>
-                <th scope="col">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...points].reverse().map((p) => (
-                <tr key={p.runId}>
-                  <th scope="row">
-                    <a href={runReportUrl(p.runId)}>{formatDate(p.startedAt)}</a>
-                  </th>
-                  <td>{p.suite}</td>
-                  <td className="num">{pct(p.passRate)}</td>
-                  <td>{p.status}</td>
+      {table && (
+        <details className="trend__table">
+          <summary>Show the runs as a table</summary>
+          <div className="table-wrap" tabIndex={0} role="region" aria-label="Runs in the trend">
+            <table className="recent">
+              <thead>
+                <tr>
+                  <th scope="col">Started</th>
+                  <th scope="col">Suite</th>
+                  <th scope="col">Pass rate</th>
+                  <th scope="col">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
+              </thead>
+              <tbody>
+                {[...points].reverse().map((p) => (
+                  <tr key={p.runId}>
+                    <th scope="row">
+                      <a href={runReportUrl(p.runId)}>{formatDate(p.startedAt)}</a>
+                    </th>
+                    <td>{p.suite}</td>
+                    <td className="num">{pct(p.passRate)}</td>
+                    <td>{p.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
     </figure>
   );
 }
 
+const TOP = 5;
+
 function Lists({ data }: { data: MetricsResponse }) {
+  const [all, setAll] = useState(false);
+  const cut = <T,>(rows: T[]) => (all ? rows : rows.slice(0, TOP));
+  const more = Math.max(data.flaky.length, data.healed.length) > TOP;
   return (
     <div className="metric-lists">
       <div className="table-wrap" tabIndex={0} role="region" aria-label="Flaky tests">
@@ -249,7 +272,7 @@ function Lists({ data }: { data: MetricsResponse }) {
           </thead>
           <tbody>
             {data.flaky.length ? (
-              data.flaky.map((f) => (
+              cut(data.flaky).map((f) => (
                 <tr key={`${f.commit}${f.file}${f.title}`}>
                   <th scope="row">{f.title}</th>
                   <td className="num">
@@ -278,7 +301,7 @@ function Lists({ data }: { data: MetricsResponse }) {
           </thead>
           <tbody>
             {data.healed.length ? (
-              data.healed.map((h) => (
+              cut(data.healed).map((h) => (
                 <tr key={`${h.file}${h.title}`}>
                   <th scope="row">
                     <a href={runReportUrl(h.runId)}>{h.title}</a>
@@ -317,6 +340,11 @@ function Lists({ data }: { data: MetricsResponse }) {
           </tbody>
         </table>
       </div>
+      {more && (
+        <button type="button" className="link-button" onClick={() => setAll((v) => !v)} aria-expanded={all}>
+          {all ? "Show the top 5 only" : "Show all rows"}
+        </button>
+      )}
     </div>
   );
 }
