@@ -78,16 +78,17 @@ export function runDuration(run: RunSummary) {
   return formatDuration(Date.parse(run.finishedAt) - Date.parse(run.startedAt));
 }
 
+// Every time on the dashboard is shown in India Standard Time. Intl names this zone "GMT+5:30", so the label is
+// added by hand.
 const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
-  timeZone: "UTC",
-  timeZoneName: "short",
+  timeZone: "Asia/Kolkata",
 });
 
-export const formatDate = (iso: string) => DATE_FORMAT.format(new Date(iso));
+export const formatDate = (iso: string) => `${DATE_FORMAT.format(new Date(iso))} IST`;
 
 export const shortSha = (sha: string | null) => (sha ? sha.slice(0, 7) : "—");
 
