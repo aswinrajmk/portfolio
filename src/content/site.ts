@@ -221,7 +221,7 @@ export const jiraAgent = {
     { id: "approve-2", label: "Approval 2", detail: "Approve or reject in Telegram", status: "live" },
     { id: "create", label: "Jira Test issues", detail: "Created and linked to story", status: "live" },
     { id: "label", label: "Suite label", detail: "I pick smoke or regression", status: "live" },
-    { id: "approve-3", label: "Approval 3", detail: "Automate it? in Telegram", status: "live" },
+    { id: "approve-3", label: "Approval 3", detail: "Automate or not, in Telegram", status: "live" },
     { id: "automate", label: "Claude Code", detail: "Writes the spec in GitHub Actions", status: "live" },
     { id: "merge", label: "PR merged", detail: "Jira test marked automated", status: "live" },
   ] satisfies PipelineStage[],
