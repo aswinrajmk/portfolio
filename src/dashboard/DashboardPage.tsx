@@ -29,8 +29,8 @@ export function DashboardPage() {
           WealthLite is a small demo wealth app with synthetic data. Every time it deploys, a Playwright smoke suite
           runs against it, the full regression suite runs nightly, and each result streams here as it finishes. When a
           locator breaks, the suite tries to heal it, and always reports what it healed. A second flow turns Jira
-          stories into reviewed test cases with a local AI agent (n8n, Ollama and Qwen), and Claude Code automates the
-          ones I label. Each item below says whether it is live or planned.
+          stories into reviewed test cases with a local AI agent (n8n, Ollama and Qwen), and Claude Code (or the local
+          model) automates the ones I label. Each item below says whether it is live or planned.
         </p>
       </header>
       <RunStrip index={1} />

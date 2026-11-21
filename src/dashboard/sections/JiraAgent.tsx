@@ -17,9 +17,9 @@ export function JiraAgent({ index }: { index: number }) {
       <p className="lede">
         When a new story is created in Jira, a self-hosted n8n workflow picks it up. A local AI agent (Ollama running
         Qwen) reviews the requirement and drafts a minimal set of test cases, which become Jira Test issues linked to
-        the story. When I label a case smoke or regression, Claude Code writes the Playwright test for it in a pull
-        request. I approve every step in Telegram. Analysis and test design stay on my own machine. Only the automation
-        step sends the story and its approved cases to Claude.
+        the story. When I label a case smoke or regression, Claude Code (or, without a subscription, the local model)
+        writes the Playwright test for it in a pull request. I approve every step in Telegram. Analysis and test design
+        stay on my own machine. Only the Claude option sends the story and its approved cases to a cloud AI.
       </p>
       <PipelineDiagram className="diagram diagram--wide" columns={4} stages={stages} title={DIAGRAM_TITLE} />
       <PipelineDiagram className="diagram diagram--narrow" columns={1} stages={stages} title={DIAGRAM_TITLE} />

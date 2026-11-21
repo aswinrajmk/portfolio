@@ -221,8 +221,8 @@ export const jiraAgent = {
     { id: "approve-2", label: "Approval 2", detail: "Approve or reject in Telegram", status: "live" },
     { id: "create", label: "Jira Test issues", detail: "Created and linked to story", status: "live" },
     { id: "label", label: "Suite label", detail: "I pick smoke or regression", status: "live" },
-    { id: "approve-3", label: "Approval 3", detail: "Automate or not, in Telegram", status: "live" },
-    { id: "automate", label: "Claude Code", detail: "Writes the spec in GitHub Actions", status: "live" },
+    { id: "approve-3", label: "Approval 3", detail: "Claude, local model or not now", status: "live" },
+    { id: "automate", label: "Spec written", detail: "Claude Code, or Qwen on my Mac", status: "live" },
     { id: "merge", label: "PR merged", detail: "Jira test marked automated", status: "live" },
   ] satisfies PipelineStage[],
   steps: [
@@ -252,11 +252,11 @@ export const jiraAgent = {
     },
     {
       title: "I choose what is worth automating",
-      body: "Not every manual case should become an automated test. I add a smoke or regression label to the Test issues that should. A second n8n workflow finds them, groups them by story and asks me in Telegram. When I approve, it labels them auto-queued and sends a repository_dispatch event to the qa-tests repo.",
+      body: "Not every manual case should become an automated test. I add a smoke or regression label to the Test issues that should. A second n8n workflow finds them, groups them by story and asks me in Telegram who should write the code: Claude Code or the local model. Either way it labels them auto-queued and sends a repository_dispatch event to the qa-tests repo.",
     },
     {
-      title: "Claude Code writes the Playwright spec",
-      body: "A GitHub Actions workflow reads the story and only its labelled Test issues from Jira. Claude Code then writes one spec for the story, following the repo's CLAUDE.md and conventions, and reuses the existing page objects and fixtures. The workflow runs lint, type checks, a tag-traceability check and the new tests against the live app, then opens a pull request.",
+      title: "Claude Code, or the local model, writes the spec",
+      body: "With Claude, a GitHub Actions workflow reads the story and its labelled Test issues from Jira, and Claude Code writes one spec that follows the repo's CLAUDE.md and reuses the page objects and fixtures. Without a Claude subscription, n8n builds the spec's skeleton itself (titles, exact tags, one step per Jira step) and Qwen on my Mac fills in the steps. Both go through the same gates: lint, type checks, a tag-traceability check and a run against the live app. A local draft that fails opens as a draft pull request for me to finish.",
     },
     {
       title: "Merged, traced and reported",
@@ -280,7 +280,8 @@ export const jiraAgent = {
     { name: "Telegram Bot API", detail: "Approval prompts with inline buttons that resume the paused workflow." },
     {
       name: "Claude Code in GitHub Actions",
-      detail: "Writes the Playwright specs from approved Jira test cases, within allowed tools and the repo's rules.",
+      detail:
+        "Writes the Playwright specs from approved Jira test cases, within allowed tools and the repo's rules. A local Qwen fallback drafts them when no subscription is available.",
     },
     {
       name: "Workflow as code",
