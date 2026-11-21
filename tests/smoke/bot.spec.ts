@@ -291,14 +291,15 @@ test("explains a low Anthropic credit balance instead of a generic error", async
   expect(text).toContain("/latest");
 });
 
-test("a requirement event tells the owner about the drafted tests", async ({ request }) => {
+test("a requirement event tells the owner about the automated Jira tests", async ({ request }) => {
   const post = (data: object, token = vars.BOT_EVENTS_TOKEN) =>
     request.post("/api/bot/events", { headers: { Authorization: `Bearer ${token}` }, data });
-  expect((await post({ kind: "requirement", issue: 5 }, "wrong")).status()).toBe(401);
-  expect((await post({ kind: "requirement", issue: "5" })).status()).toBe(400);
+  expect((await post({ kind: "requirement", story: "KAN-5" }, "wrong")).status()).toBe(401);
+  expect((await post({ kind: "requirement", story: "5" })).status()).toBe(400);
   const ok = await post({
     kind: "requirement",
-    issue: 5,
+    story: "KAN-5",
+    tests: "KAN-7,KAN-8",
     title: "Show a total gain or loss",
     status: "pr_opened",
     pr_number: 14,
@@ -309,7 +310,8 @@ test("a requirement event tells the owner about the drafted tests", async ({ req
   });
   expect(ok.status()).toBe(200);
   const text = String((await sentTo(request, OWNER)).at(-1)?.body?.text);
-  expect(text).toContain("Requirement #5");
+  expect(text).toContain("Story KAN-5");
+  expect(text).toContain("KAN-7, KAN-8");
   expect(text).toContain("1 passed · 2 failed");
   expect(text).toContain("/merge qa-tests 14");
 });
