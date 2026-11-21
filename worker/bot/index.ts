@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { isAuthorized, json, readJson } from "../api/http";
+import { getMetrics } from "../api/metrics";
 import { listRequirements } from "../api/requirements";
 import { listRuns } from "../api/store";
 import { execute } from "./actions";
@@ -42,7 +43,7 @@ const HELP = [
   "• Merge wealthlite PR 12",
   "",
   "<b>Shortcuts</b> (work without AI credit):",
-  "/latest · /runs · /reqs (requirement coverage)",
+  "/latest · /runs · /reqs (requirement coverage) · /readiness (release go/no-go)",
   "/run [filter], e.g. /run @KAN-10, /run @smoke or /run login",
   "/merge &lt;repo&gt; &lt;number&gt;, e.g. /merge qa-tests 12",
   "/pending · /reset · /help",
@@ -192,6 +193,21 @@ async function onText(env: Env, cfg: BotConfig, telegram: Telegram, chatId: stri
       ));
     }
     return sendPrepared(telegram, chatId, await prepareMerge(env, cfg, chatId, repo as Repo, number));
+  }
+  if (command === "/readiness") {
+    const m = await getMetrics(env, "wealthlite");
+    const icon = { go: "✅", caution: "⚠️", "no-go": "⛔" }[m.readiness.verdict];
+    const c = m.coverage;
+    const body = [
+      `${icon} <b>Release readiness: ${m.readiness.verdict.toUpperCase()}</b>`,
+      ...m.readiness.reasons.map((r) => `• ${esc(r.text)}`),
+      "",
+      `Pass rate ${m.passRate === null ? "–" : `${Math.round(m.passRate * 100)}%`} over ${m.window.runs} runs · ` +
+        `${m.flaky.length} flaky · ${m.healed.length} healed to fix` +
+        (c ? ` · ${c.automated}/${c.total} Jira tests automated` : ""),
+      `<a href="${cfg.publicUrl}/dashboard/#metrics">Open the metrics</a>`,
+    ].join("\n");
+    return void (await telegram.sendMessage(chatId, body));
   }
   if (command === "/reqs") {
     const { requirements, issuesLoaded } = await listRequirements(env, "wealthlite");

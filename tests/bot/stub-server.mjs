@@ -19,6 +19,15 @@ const JIRA_STORIES = {
   ],
 };
 
+// Jira Test issues: 3 approved, 2 automated (one smoke, one regression), 1 waiting in the automation pipeline.
+const JIRA_TESTS = {
+  issues: [
+    { key: "KAN-101", fields: { labels: ["smoke", "automated"] } },
+    { key: "KAN-102", fields: { labels: ["regression", "automated"] } },
+    { key: "KAN-103", fields: { labels: ["smoke", "auto-queued"] } },
+  ],
+};
+
 const send = (res, status, body) => {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(body === undefined ? "" : JSON.stringify(body));
@@ -103,7 +112,10 @@ createServer(async (req, res) => {
       head: { sha: "abc123def456" },
     });
   }
-  if (path === "/rest/api/3/search/jql") return send(res, 200, JIRA_STORIES);
+  if (path === "/rest/api/3/search/jql") {
+    const jql = url.searchParams.get("jql") ?? "";
+    return send(res, 200, /issuetype = Test/.test(jql) ? JIRA_TESTS : JIRA_STORIES);
+  }
   if (/\/commits\/[^/]+\/check-runs$/.test(path)) return send(res, 200, { check_runs: checkRuns });
   if (/\/pulls$/.test(path)) return send(res, 200, []);
 

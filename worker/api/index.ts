@@ -1,6 +1,7 @@
 import { LIMITS, validateRunFinish, validateRunStart, validateTestResult } from "../../shared/results";
 import { postRunReport } from "../bot/report";
 import { error, isAuthorized, json, readJson } from "./http";
+import { getMetrics } from "./metrics";
 import { listRequirements } from "./requirements";
 import { addResult, createRun, finishRun, getRun, getScreenshot, listRuns, runState } from "./store";
 
@@ -35,6 +36,10 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
     if (path === "/api/requirements") {
       // Only the demo app has requirement issues; the project is fixed so callers cannot point this at other repos.
       return json(await listRequirements(env, "wealthlite"));
+    }
+    if (path === "/api/metrics") {
+      // Fixed project, like /api/requirements.
+      return json(await getMetrics(env, "wealthlite"));
     }
     const runMatch = ROUTES.run.exec(path);
     if (runMatch?.[1]) {

@@ -11,6 +11,7 @@ test.describe("QA dashboard", () => {
     await expect(page).toHaveTitle("QA dashboard · Aswin Raj");
     expect(await sectionHeadings(page)).toEqual([
       "Latest pipeline run",
+      "Quality metrics and release readiness",
       "Requirements coverage",
       "Jira to automated tests: AI agents with approvals",
       "Skills and evidence",
@@ -39,7 +40,7 @@ test.describe("QA dashboard", () => {
 
   test("shows a status badge for every skill", async ({ page }) => {
     const rows = page.locator("#evidence tbody tr");
-    await expect(rows).toHaveCount(8);
+    await expect(rows).toHaveCount(9);
     for (const row of await rows.all()) {
       await expect(row.locator("[data-status]")).toHaveText(/^(Live|In progress|Planned)$/);
     }
@@ -94,6 +95,18 @@ test.describe("QA dashboard", () => {
       "href",
       "https://github.com/aswinrajmk/wealthlite/tree/main/automation/n8n",
     );
+  });
+
+  test("shows quality metrics with a release verdict, KPIs and an accessible trend", async ({ page }) => {
+    const section = page.locator("#metrics");
+    await expect(section.getByRole("heading", { name: "Quality metrics and release readiness" })).toBeVisible();
+    await expect(section.locator("[data-verdict]")).toHaveText(/Release readiness: (GO|CAUTION|NO-GO)/);
+    for (const kpi of ["Pass rate", "Flaky tests", "Healed locators to fix", "Automation coverage"]) {
+      await expect(section.locator(".kpi dt", { hasText: kpi })).toBeVisible();
+    }
+    const trend = section.getByRole("group", { name: /^Pass rate per run\./ });
+    if (await trend.count()) await expect(trend).toBeVisible();
+    else await expect(section.getByText("The pass-rate trend appears after a few more suite runs.")).toBeVisible();
   });
 
   test("renders the pipeline diagram with an accessible name", async ({ page }) => {

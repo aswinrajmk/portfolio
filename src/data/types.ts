@@ -7,7 +7,16 @@ export interface Sourced<T> {
 }
 
 export type {
+  Coverage,
+  FlakyTest,
   Healing,
+  HealedTest,
+  MetricsResponse,
+  ReadinessReason,
+  SlowTest,
+  SuiteKind,
+  TrendPoint,
+  Verdict,
   Requirement,
   RequirementsResponse,
   RequirementState,

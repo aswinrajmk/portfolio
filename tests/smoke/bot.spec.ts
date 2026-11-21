@@ -281,6 +281,14 @@ test("/reqs lists requirement coverage", async ({ request }) => {
   expect(text).toContain("/dashboard/#requirements");
 });
 
+test("/readiness sends the release verdict with reasons, without the AI", async ({ request }) => {
+  await say(request, "/readiness");
+  const text = String((await sentTo(request, OWNER)).at(-1)?.body?.text);
+  expect(text).toMatch(/Release readiness: (GO|CAUTION|NO-GO)/);
+  expect(text).toContain("/dashboard/#metrics");
+  expect((await stub(request)).filter((r) => r.path === "/v1/messages")).toEqual([]);
+});
+
 test("explains a low Anthropic credit balance instead of a generic error", async ({ request }) => {
   await request.post(`${STUB}/__anthropicError`, {
     data: { status: 400, message: "Your credit balance is too low to access the Anthropic API." },
