@@ -1,5 +1,6 @@
 // Every piece of editable copy on the site lives in this file.
 // Source for profile and experience: Aswin's resume. Do not add claims that are not in it.
+// The toolbox groups "AI and agents" and "Built in this portfolio" may also list tools the linked repos prove.
 // Anything marked `draft: true` is shown with a "Draft" label until Aswin reviews it.
 
 export type Status = "live" | "in-progress" | "planned";
@@ -143,12 +144,31 @@ export const experience: ExperienceEntry[] = [
 export const toolbox: SkillGroup[] = [
   {
     label: "Automation",
-    items: ["Playwright", "WebdriverIO", "Appium", "Selenium WebDriver", "TestNG", "Cucumber", "Mocha"],
+    items: ["Playwright", "WebdriverIO", "Appium", "Selenium WebDriver", "TestNG", "Cucumber", "Mocha", "axe-core"],
   },
   { label: "Languages", items: ["TypeScript", "JavaScript", "Java", "SQL"] },
+  { label: "Cross-browser and reporting", items: ["BrowserStack", "ReportPortal"] },
   { label: "API and monitoring", items: ["Postman", "New Relic", "Tsuga", "Amplitude"] },
-  { label: "CI/CD and version control", items: ["GitLab CI/CD", "Jenkins", "Git", "Bitbucket", "Maven", "Docker"] },
+  {
+    label: "CI/CD and version control",
+    items: ["GitLab CI/CD", "GitHub Actions", "Jenkins", "Git", "Bitbucket", "Maven", "Docker"],
+  },
   { label: "Test management", items: ["Jira", "Confluence", "Xray", "Zephyr", "Redmine"] },
+  {
+    label: "AI and agents",
+    items: ["Claude Code", "Amazon Q", "Microsoft Copilot", "n8n", "Ollama (Qwen)"],
+  },
+  {
+    label: "Built in this portfolio",
+    items: [
+      "Cloudflare Workers + D1",
+      "Jira REST API",
+      "Telegram Bot API",
+      "GitHub Pages",
+      "ESLint + Prettier",
+      "Husky + commitlint",
+    ],
+  },
   { label: "Business systems", items: ["IBM Sterling OMS", "Cybersource"] },
 ];
 
@@ -168,6 +188,12 @@ export const evidence: EvidenceSkill[] = [
     evidence: { label: "qa-tests: layered framework, self-healing, tag traceability", href: QA_REPO },
   },
   {
+    name: "Quality metrics and release readiness",
+    atWork: "Test summary reporting and release testing",
+    status: "live",
+    evidence: { label: "Metrics and go/no-go from every stored run", href: "#metrics" },
+  },
+  {
     name: "Requirement traceability",
     atWork: "Test planning and traceability across the SDLC",
     status: "live",
@@ -176,7 +202,7 @@ export const evidence: EvidenceSkill[] = [
   {
     name: "API automation",
     atWork: "Playwright API suites, Postman",
-    status: "in-progress",
+    status: "live",
     evidence: { label: "API tests in qa-tests", href: `${QA_REPO}/tree/main/tests/api` },
   },
   { name: "Appium + WebdriverIO", atWork: "Appium for iOS, WebdriverIO suites at QBurst", status: "planned" },
@@ -203,7 +229,7 @@ export const pipeline: PipelineStage[] = [
   { id: "trigger", label: "Trigger", detail: "Deploy event to qa-tests", status: "live" },
   { id: "tests", label: "QA suite", detail: "Smoke on deploy, regression nightly", status: "live" },
   { id: "api", label: "Results API", detail: "Worker + D1, per test", status: "live" },
-  { id: "dashboard", label: "Live report", detail: "This dashboard", status: "live" },
+  { id: "dashboard", label: "Live report", detail: "Results, metrics, release readiness", status: "live" },
   { id: "telegram", label: "Telegram bot", detail: "Reports, runs, code changes", status: "live" },
 ];
 

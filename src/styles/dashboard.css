@@ -524,3 +524,181 @@
 .agent__source {
   margin-top: var(--space-4);
 }
+
+/* Quality metrics and release readiness */
+.readiness {
+  margin: var(--space-5) 0;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--rule-strong);
+  border-left-width: 4px;
+  background: var(--surface);
+}
+.readiness--go {
+  border-left-color: var(--live);
+}
+.readiness--caution {
+  border-left-color: var(--progress);
+}
+.readiness--no-go {
+  border-left-color: var(--danger);
+}
+.readiness__verdict {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--step-1);
+}
+.readiness__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  font-weight: 700;
+  color: var(--surface);
+}
+.readiness--go .readiness__icon {
+  background: var(--live);
+}
+.readiness--caution .readiness__icon {
+  background: var(--progress);
+}
+.readiness--no-go .readiness__icon {
+  background: var(--danger);
+}
+.readiness__reasons {
+  margin: var(--space-3) 0 0;
+  padding-left: 1.2em;
+  color: var(--ink);
+}
+.kpi dd {
+  display: grid;
+  gap: 2px;
+}
+.kpi__value {
+  font-size: var(--step-2);
+  font-weight: 600;
+}
+.kpi__detail {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.trend {
+  margin: var(--space-6) 0 0;
+}
+.trend__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.trend__title {
+  font-weight: 600;
+  color: var(--ink);
+}
+.trend__legend {
+  display: flex;
+  gap: var(--space-4);
+}
+.trend__key::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.trend__key--smoke::before {
+  background: var(--series-1);
+}
+.trend__key--regression::before {
+  background: var(--series-2);
+}
+.trend__plot {
+  position: relative;
+  overflow-x: auto;
+}
+.trend__plot svg {
+  display: block;
+  width: 100%;
+  min-width: 560px;
+  height: auto;
+}
+.trend__grid {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+.trend__axis,
+.trend__label {
+  fill: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.trend__label {
+  fill: var(--ink);
+}
+.trend__crosshair {
+  stroke: var(--rule-strong);
+  stroke-dasharray: 3 3;
+}
+.trend__series path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.trend__series--smoke path,
+.trend__series--smoke .trend__dot {
+  stroke: var(--series-1);
+}
+.trend__series--regression path,
+.trend__series--regression .trend__dot {
+  stroke: var(--series-2);
+}
+.trend__series--smoke .trend__dot {
+  fill: var(--series-1);
+}
+.trend__series--regression .trend__dot {
+  fill: var(--series-2);
+}
+.trend__dot {
+  stroke-width: 2;
+  paint-order: stroke;
+  outline: 2px solid var(--surface);
+}
+.trend__hit {
+  fill: transparent;
+}
+.trend__series a:focus-visible .trend__dot {
+  stroke: var(--focus);
+  stroke-width: 3;
+}
+.trend__tip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  font-size: var(--step--1);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.trend__table {
+  margin-top: var(--space-3);
+  font-size: var(--step--1);
+}
+.metric-lists {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+.metric-lists caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: var(--space-2);
+}

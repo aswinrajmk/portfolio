@@ -2,6 +2,7 @@ import { Layout, type SectionRef } from "../shared/Layout";
 import { Decisions } from "./sections/Decisions";
 import { Evidence } from "./sections/Evidence";
 import { JiraAgent } from "./sections/JiraAgent";
+import { Metrics } from "./sections/Metrics";
 import { Pipeline } from "./sections/Pipeline";
 import { Requirements } from "./sections/Requirements";
 import { RunStrip } from "./sections/RunStrip";
@@ -10,6 +11,7 @@ import { Upcoming } from "./sections/Upcoming";
 
 const SECTIONS: SectionRef[] = [
   { id: "latest-run", title: "Latest pipeline run" },
+  { id: "metrics", title: "Quality metrics and release readiness" },
   { id: "requirements", title: "Requirements coverage" },
   { id: "jira-agent", title: "Jira to automated tests: AI agents with approvals" },
   { id: "evidence", title: "Skills and evidence" },
@@ -34,13 +36,14 @@ export function DashboardPage() {
         </p>
       </header>
       <RunStrip index={1} />
-      <Requirements index={2} />
-      <JiraAgent index={3} />
-      <Evidence index={4} />
-      <Pipeline index={5} />
-      <Strategy index={6} />
-      <Decisions index={7} />
-      <Upcoming index={8} />
+      <Metrics index={2} />
+      <Requirements index={3} />
+      <JiraAgent index={4} />
+      <Evidence index={5} />
+      <Pipeline index={6} />
+      <Strategy index={7} />
+      <Decisions index={8} />
+      <Upcoming index={9} />
     </Layout>
   );
 }

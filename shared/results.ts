@@ -156,6 +156,77 @@ export interface RequirementsResponse {
   issuesLoaded: boolean;
 }
 
+// ---------- Quality metrics and release readiness ----------
+
+/** Which suite a run was: smoke (@smoke), regression (@smoke|@regression or unfiltered), or a partial rerun. */
+export type SuiteKind = "smoke" | "regression" | "partial";
+
+export interface TrendPoint {
+  runId: string;
+  suite: SuiteKind;
+  startedAt: string;
+  /** Passed + healed over the tests that ran (skipped excluded), 0–1. */
+  passRate: number;
+  status: StoredRunStatus;
+}
+
+export interface FlakyTest {
+  title: string;
+  file: string;
+  commit: string;
+  failures: number;
+  passes: number;
+}
+
+export interface HealedTest {
+  title: string;
+  file: string;
+  element: string;
+  suggestion: string;
+  runId: string;
+}
+
+export interface SlowTest {
+  title: string;
+  file: string;
+  avgMs: number;
+  runs: number;
+}
+
+export interface Coverage {
+  /** Jira Test issues in KAN (approved manual test cases). */
+  total: number;
+  /** Labelled `automated`. */
+  automated: number;
+  smoke: number;
+  regression: number;
+  /** In the automation pipeline (auto-pending, auto-queued, auto-pr-open, auto-failed). */
+  pending: number;
+}
+
+export type Verdict = "go" | "caution" | "no-go";
+
+export interface ReadinessReason {
+  level: Verdict;
+  text: string;
+  href?: string;
+}
+
+export interface MetricsResponse {
+  window: { runs: number; days: number };
+  /** Over smoke and regression runs in the window; null when there are none. */
+  passRate: number | null;
+  trend: TrendPoint[];
+  flaky: FlakyTest[];
+  healed: HealedTest[];
+  slowest: SlowTest[];
+  medianDurationMs: { smoke: number | null; regression: number | null };
+  /** Median time from a suite going red to its next green run. */
+  timeToGreenMs: number | null;
+  coverage: Coverage | null;
+  readiness: { verdict: Verdict; reasons: ReadinessReason[] };
+}
+
 // ---------- Validation (hand-written to keep the Worker dependency-free) ----------
 
 export type Validated<T> = { ok: true; value: T } | { ok: false; error: string };

@@ -193,3 +193,69 @@ test.describe("Results API: requirements (local only)", () => {
     expect(body.requirements.find((r) => r.key === orphan)?.state).toBe("passing");
   });
 });
+
+test.describe("Results API: metrics (local only)", () => {
+  test.skip(!isLocal, "Writes run only against the local server");
+  // Jira Test issues come from the stub server: 3 total, 2 automated, 1 pending.
+
+  test("reports flaky and healed tests, coverage and a readiness verdict with reasons", async ({ request }) => {
+    const auth = { Authorization: `Bearer ${localToken()}` };
+    const stamp = Date.now();
+    const commitSha = `c0ffee${stamp}`.slice(0, 40);
+    const run = async (filter: string) =>
+      (
+        (await (
+          await request.post("/api/runs", {
+            headers: auth,
+            data: { project: "wealthlite", trigger: "manual", targetUrl: "http://localhost:8787", commitSha, filter },
+          })
+        ).json()) as { id: string }
+      ).id;
+    const result = (id: string, title: string, status: string, extra: object = {}) =>
+      request.post(`/api/runs/${id}/results`, {
+        headers: auth,
+        data: { title: `${title} ${stamp}`, file: "metrics.spec.ts", status, durationMs: 1000, ...extra },
+      });
+    const finish = (id: string) => request.post(`/api/runs/${id}/finish`, { headers: auth });
+
+    // Same commit: the test fails, then passes. That is flaky, not a code change.
+    const red = await run("@smoke");
+    await result(red, "flips", "failed", { error: { message: "boom" } });
+    await finish(red);
+    const green = await run("@smoke");
+    await result(green, "flips", "passed");
+    await result(green, "heals", "healed", {
+      healing: {
+        element: "Sign in button",
+        broken: "role=button[name=Sign in]",
+        used: "testid",
+        suggestion: "getByRole('button', { name: 'Log in' })",
+      },
+    });
+    await finish(green);
+
+    const response = await request.get("/api/metrics");
+    expect(response.status()).toBe(200);
+    const body = (await response.json()) as {
+      passRate: number | null;
+      trend: { runId: string; suite: string; passRate: number }[];
+      flaky: { title: string; failures: number; passes: number }[];
+      healed: { title: string; suggestion: string }[];
+      coverage: { total: number; automated: number; smoke: number; regression: number; pending: number } | null;
+      timeToGreenMs: number | null;
+      readiness: { verdict: string; reasons: { level: string; text: string }[] };
+    };
+
+    expect(body.trend.find((p) => p.runId === red)).toMatchObject({ suite: "smoke", passRate: 0 });
+    expect(body.trend.find((p) => p.runId === green)).toMatchObject({ suite: "smoke", passRate: 1 });
+    expect(body.flaky.find((f) => f.title === `flips ${stamp}`)).toMatchObject({ failures: 1, passes: 1 });
+    expect(body.healed.find((h) => h.title === `heals ${stamp}`)?.suggestion).toBe(
+      "getByRole('button', { name: 'Log in' })",
+    );
+    expect(body.coverage).toEqual({ total: 3, automated: 2, smoke: 2, regression: 1, pending: 1 });
+    expect(body.timeToGreenMs).not.toBeNull();
+    expect(["go", "caution", "no-go"]).toContain(body.readiness.verdict);
+    expect(body.readiness.verdict).not.toBe("go"); // flaky and healed tests always mean caution at least
+    expect(body.readiness.reasons.map((r) => r.text).join(" ")).toMatch(/flaky test\(s\)/);
+  });
+});

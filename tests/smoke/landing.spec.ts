@@ -17,6 +17,15 @@ test.describe("Profile page", () => {
     expect(await sectionHeadings(page)).toEqual(["Experience", "Skills", "Credentials", "Contact"]);
   });
 
+  test("toolbox shows the AI tools and what this portfolio is built with", async ({ page }) => {
+    const toolbox = page.locator("#skills .toolbox");
+    await expect(toolbox.locator("dt", { hasText: "AI and agents" })).toBeVisible();
+    await expect(toolbox.locator("dt", { hasText: "Built in this portfolio" })).toBeVisible();
+    for (const tool of ["Claude Code", "n8n", "Ollama (Qwen)", "GitHub Actions", "BrowserStack", "ReportPortal"]) {
+      await expect(toolbox).toContainText(tool);
+    }
+  });
+
   test("lists all four roles", async ({ page }) => {
     const experience = page.locator("#experience");
     for (const company of ["QBurst Technologies", "Infosys", "Vofox Solutions", "DLI-IT Group"]) {

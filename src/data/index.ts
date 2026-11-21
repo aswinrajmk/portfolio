@@ -1,5 +1,5 @@
 import { sampleLatestRun } from "./sample";
-import type { RequirementsResponse, RunDetail, RunSummary, Sourced } from "./types";
+import type { MetricsResponse, RequirementsResponse, RunDetail, RunSummary, Sourced } from "./types";
 
 export type * from "./types";
 
@@ -33,6 +33,11 @@ export async function getRun(id: string): Promise<RunDetail | null> {
 /** Requirements with their linked tests. Null when the API is unreachable. */
 export async function getRequirements(): Promise<RequirementsResponse | null> {
   return getJson<RequirementsResponse>("/api/requirements");
+}
+
+/** Quality metrics and release readiness. Null when the API is unreachable. */
+export async function getMetrics(): Promise<MetricsResponse | null> {
+  return getJson<MetricsResponse>("/api/metrics");
 }
 
 export const screenshotUrl = (testId: string) => `/api/results/${encodeURIComponent(testId)}/screenshot`;

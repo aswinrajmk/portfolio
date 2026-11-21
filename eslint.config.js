@@ -14,6 +14,10 @@ export default tseslint.config(
     files: ["src/**/*.{ts,tsx}"],
     extends: [reactHooks.configs.flat.recommended, jsxA11y.flatConfigs.strict],
     languageOptions: { globals: globals.browser },
+    rules: {
+      // A labelled, scrollable region must be keyboard-focusable (axe: scrollable-region-focusable).
+      "jsx-a11y/no-noninteractive-tabindex": ["error", { tags: [], roles: ["tabpanel", "region"] }],
+    },
   },
   {
     files: ["*.config.{js,ts}", "tests/**/*.ts"],
