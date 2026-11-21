@@ -5,12 +5,12 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 // so this suite never writes test data to production or preview databases.
 const isLocal = !process.env.BASE_URL;
 
-function localToken(): string {
+function localToken(name = "RESULTS_API_TOKEN"): string {
   const line = readFileSync(".dev.vars", "utf8")
     .split("\n")
-    .find((l) => l.startsWith("RESULTS_API_TOKEN="));
-  if (!line) throw new Error("RESULTS_API_TOKEN missing from .dev.vars");
-  return line.slice("RESULTS_API_TOKEN=".length).trim();
+    .find((l) => l.startsWith(`${name}=`));
+  if (!line) throw new Error(`${name} missing from .dev.vars`);
+  return line.slice(name.length + 1).trim();
 }
 
 const PROJECT = "api-spec";
@@ -257,5 +257,53 @@ test.describe("Results API: metrics (local only)", () => {
     expect(["go", "caution", "no-go"]).toContain(body.readiness.verdict);
     expect(body.readiness.verdict).not.toBe("go"); // flaky and healed tests always mean caution at least
     expect(body.readiness.reasons.map((r) => r.text).join(" ")).toMatch(/flaky test\(s\)/);
+  });
+});
+
+test.describe("Results API: AI evals (local only)", () => {
+  test.skip(!isLocal, "Writes run only against the local server");
+
+  test("only the AI evals token can write, input is validated, and the summary covers all three kinds", async ({
+    request,
+  }) => {
+    const post = (data: object, token = localToken("AI_EVALS_TOKEN")) =>
+      request.post("/api/ai-evals", { headers: { Authorization: `Bearer ${token}` }, data });
+
+    // The results token cannot write evals, and the evals token is required.
+    expect((await post({ kind: "live", score: 50 }, localToken())).status()).toBe(401);
+    expect((await post({ kind: "nope" })).status()).toBe(400);
+    expect((await post({ kind: "live", score: 120 })).status()).toBe(400);
+    expect((await post({ kind: "live", storyKey: "DROP TABLE" })).status()).toBe(400);
+
+    const stamp = Date.now();
+    const mean = 50 + (stamp % 40) / 10; // unique, so this run's row is recognisable
+    expect(
+      (
+        await post({
+          kind: "golden",
+          model: "qwen3.5:2b",
+          promptVersion: "test",
+          score: mean,
+          details: { perStory: { "G-01": 40, "G-02": 100 } },
+          runUrl: "https://github.com/aswinrajmk/wealthlite/actions/runs/1",
+        })
+      ).status(),
+    ).toBe(201);
+    expect((await post({ kind: "live", storyKey: "KAN-6", score: 90, summary: `Score 90% ${stamp}` })).status()).toBe(
+      201,
+    );
+    expect((await post({ kind: "automation", engine: "local", outcome: "draft", storyKey: "KAN-6" })).status()).toBe(
+      201,
+    );
+
+    const body = (await (await request.get("/api/ai-evals")).json()) as {
+      golden: { latest: { mean: number; perStory: Record<string, number> } | null };
+      live: { count: number; recent: { summary: string }[] };
+      automation: { engine: string; runs: number; draft: number }[];
+    };
+    expect(body.golden.latest).toMatchObject({ mean: Math.round(mean * 10) / 10, perStory: { "G-01": 40 } });
+    expect(body.live.recent.map((d) => d.summary)).toContain(`Score 90% ${stamp}`);
+    expect(body.automation.find((e) => e.engine === "local")?.draft).toBeGreaterThan(0);
+    expect(body.automation.map((e) => e.engine)).toEqual(["claude", "local"]);
   });
 });

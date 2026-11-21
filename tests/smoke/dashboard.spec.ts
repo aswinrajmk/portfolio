@@ -3,7 +3,11 @@ import { expect, test } from "./fixtures";
 
 const TABS = {
   overview: ["Release readiness", "Latest pipeline run"],
-  quality: ["Quality metrics and release readiness", "Requirements coverage"],
+  quality: [
+    "Quality metrics and release readiness",
+    "Requirements coverage",
+    "AI quality: are the AI-written tests good enough?",
+  ],
   "ai-workflow": ["Jira to automated tests: AI agents with approvals", "Pipeline architecture"],
   "how-i-work": ["Skills and evidence", "Test strategy", "Decisions", "AI agents and leadership"],
 } as const;
@@ -94,6 +98,20 @@ test.describe("QA dashboard tabs", () => {
     const trend = section.getByRole("group", { name: /^Pass rate per run\./ });
     if (await trend.count()) await expect(trend).toBeVisible();
     else await expect(section.getByText("The pass-rate trend appears after a few more suite runs.")).toBeVisible();
+  });
+
+  test("shows AI quality: golden score, engines, and how the evals work", async ({ page }) => {
+    await open(page, "ai-quality");
+    await expect(page.getByRole("tab", { selected: true })).toHaveText("Quality");
+    const section = page.locator("#ai-quality");
+    for (const kpi of ["Golden-set score", "Change vs previous run", "Live drafts scored"]) {
+      await expect(section.locator(".kpi dt", { hasText: kpi })).toBeVisible();
+    }
+    await expect(section.getByRole("table", { name: /Who wrote the automated tests/ })).toBeVisible();
+    await expect(section.getByRole("link", { name: "How the evals work" })).toHaveAttribute(
+      "href",
+      "https://github.com/aswinrajmk/wealthlite/tree/main/automation/evals",
+    );
   });
 
   test("shows requirement coverage with a state for every requirement, or says why not", async ({ page }) => {

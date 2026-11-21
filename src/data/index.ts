@@ -1,5 +1,5 @@
 import { sampleLatestRun } from "./sample";
-import type { MetricsResponse, RequirementsResponse, RunDetail, RunSummary, Sourced } from "./types";
+import type { AiQualityResponse, MetricsResponse, RequirementsResponse, RunDetail, RunSummary, Sourced } from "./types";
 
 export type * from "./types";
 
@@ -38,6 +38,11 @@ export async function getRequirements(): Promise<RequirementsResponse | null> {
 /** Quality metrics and release readiness. Null when the API is unreachable. */
 export async function getMetrics(): Promise<MetricsResponse | null> {
   return getJson<MetricsResponse>("/api/metrics");
+}
+
+/** AI eval results: golden-set runs, live draft scores, automation by engine. Null when the API is unreachable. */
+export async function getAiQuality(): Promise<AiQualityResponse | null> {
+  return getJson<AiQualityResponse>("/api/ai-evals");
 }
 
 export const screenshotUrl = (testId: string) => `/api/results/${encodeURIComponent(testId)}/screenshot`;

@@ -1,5 +1,6 @@
-import { LIMITS, validateRunFinish, validateRunStart, validateTestResult } from "../../shared/results";
+import { LIMITS, validateAiEval, validateRunFinish, validateRunStart, validateTestResult } from "../../shared/results";
 import { postRunReport } from "../bot/report";
+import { addAiEval, aiQuality } from "./aiEvals";
 import { error, isAuthorized, json, readJson } from "./http";
 import { getMetrics } from "./metrics";
 import { listRequirements } from "./requirements";
@@ -37,6 +38,9 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
       // Only the demo app has requirement issues; the project is fixed so callers cannot point this at other repos.
       return json(await listRequirements(env, "wealthlite"));
     }
+    if (path === "/api/ai-evals") {
+      return json(await aiQuality(env.DB));
+    }
     if (path === "/api/metrics") {
       // Fixed project, like /api/requirements.
       return json(await getMetrics(env, "wealthlite"));
@@ -54,6 +58,17 @@ export async function handleApi(request: Request, env: Env, ctx: ExecutionContex
         headers: { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=31536000, immutable" },
       });
     }
+  }
+
+  // AI evals have their own token, so CI and n8n can report scores without being able to write test results.
+  if (method === "POST" && path === "/api/ai-evals") {
+    const token = (env as unknown as Record<string, string | undefined>).AI_EVALS_TOKEN;
+    if (!(await isAuthorized(request, token))) return error(401, "unauthorized", "A valid bearer token is required");
+    const parsed = await readJson(request, LIMITS.bodyBytes);
+    if (!parsed.ok) return parsed.response;
+    const input = validateAiEval(parsed.body);
+    if (!input.ok) return error(400, "invalid_body", input.error);
+    return json({ id: await addAiEval(env.DB, input.value) }, 201);
   }
 
   if (method === "POST") {

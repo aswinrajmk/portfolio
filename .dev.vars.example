@@ -1,6 +1,8 @@
 # Local-only Worker secrets and variables. Copy to .dev.vars (gitignored).
 # `npm run dev` / `npm test` create .dev.vars with these keys if missing (scripts/ensure-dev-vars.mjs).
 RESULTS_API_TOKEN=change-me-local-only
+# Lets CI and n8n report AI eval scores (POST /api/ai-evals), and nothing else.
+AI_EVALS_TOKEN=change-me-local-only
 # Telegram bot: locally every external API points at the test stub (tests/bot/stub-server.mjs).
 TELEGRAM_BOT_TOKEN=local-test-bot-token
 TELEGRAM_WEBHOOK_SECRET=local-test-webhook-secret

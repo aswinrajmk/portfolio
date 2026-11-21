@@ -227,6 +227,62 @@ export interface MetricsResponse {
   readiness: { verdict: Verdict; reasons: ReadinessReason[] };
 }
 
+// ---------- AI quality (evals of AI-drafted test cases and specs) ----------
+
+export const AI_EVAL_KINDS = ["golden", "live", "automation"] as const;
+export const AI_ENGINES = ["claude", "local"] as const;
+export const AI_OUTCOMES = ["pr_opened", "pr_updated", "draft", "no_changes", "failed"] as const;
+export type AiEvalKind = (typeof AI_EVAL_KINDS)[number];
+export type AiEngine = (typeof AI_ENGINES)[number];
+export type AiOutcome = (typeof AI_OUTCOMES)[number];
+
+export interface AiEvalInput {
+  kind: AiEvalKind;
+  model?: string;
+  promptVersion?: string;
+  storyKey?: string;
+  /** 0–100. For a golden run, the average over the golden set. */
+  score?: number;
+  summary?: string;
+  /** Golden runs: { perStory: { "G-01": 83, … } }. Stored as JSON. */
+  details?: Record<string, unknown>;
+  engine?: AiEngine;
+  outcome?: AiOutcome;
+  runUrl?: string;
+}
+
+export interface GoldenRun {
+  model: string;
+  promptVersion: string;
+  mean: number;
+  perStory: Record<string, number>;
+  at: string;
+  runUrl: string | null;
+}
+
+export interface LiveDraft {
+  storyKey: string;
+  score: number;
+  summary: string;
+  promptVersion: string | null;
+  at: string;
+}
+
+export interface EngineStats {
+  engine: AiEngine;
+  runs: number;
+  prOpened: number;
+  draft: number;
+  failed: number;
+  noChanges: number;
+}
+
+export interface AiQualityResponse {
+  golden: { latest: GoldenRun | null; trend: { at: string; mean: number; model: string; promptVersion: string }[] };
+  live: { count: number; average: number | null; recent: LiveDraft[] };
+  automation: EngineStats[];
+}
+
 // ---------- Validation (hand-written to keep the Worker dependency-free) ----------
 
 export type Validated<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -290,6 +346,39 @@ function guard<T>(body: unknown, parse: (o: Obj) => T): Validated<T> {
     if (e instanceof ValidationError) return { ok: false, error: e.message };
     throw e;
   }
+}
+
+export function validateAiEval(body: unknown): Validated<AiEvalInput> {
+  return guard(body, (o) => {
+    const kind = oneOf(o, "kind", AI_EVAL_KINDS);
+    let score: number | undefined;
+    if (o.score !== undefined) {
+      if (typeof o.score !== "number" || !Number.isFinite(o.score) || o.score < 0 || o.score > 100) {
+        throw new ValidationError("score must be a number between 0 and 100");
+      }
+      score = Math.round(o.score * 10) / 10; // one decimal: a golden average such as 93.6
+    }
+    const details = o.details;
+    if (details !== undefined) {
+      if (!isObj(details)) throw new ValidationError("details must be an object");
+      if (JSON.stringify(details).length > 8_000) throw new ValidationError("details is too large");
+    }
+    const storyKey = str(o, "storyKey", 20);
+    if (storyKey !== undefined && !/^(KAN|G)-\d{1,6}$/.test(storyKey))
+      throw new ValidationError("storyKey must look like KAN-6");
+    return {
+      kind,
+      model: str(o, "model", 60),
+      promptVersion: str(o, "promptVersion", 20),
+      storyKey,
+      score,
+      summary: str(o, "summary", 500),
+      details: details as Record<string, unknown> | undefined,
+      engine: o.engine === undefined ? undefined : oneOf(o, "engine", AI_ENGINES),
+      outcome: o.outcome === undefined ? undefined : oneOf(o, "outcome", AI_OUTCOMES),
+      runUrl: httpUrl(o, "runUrl"),
+    };
+  });
 }
 
 export function validateRunStart(body: unknown): Validated<RunStartInput> {
