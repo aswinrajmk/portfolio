@@ -72,11 +72,21 @@ export async function aiQuality(db: D1Database): Promise<AiQualityResponse> {
     };
   };
 
-  const live = results.filter((r) => r.kind === "live" && r.score !== null);
-  const recent: LiveDraft[] = live.slice(0, 10).map((r) => ({
+  const storyIssueOf = (r: Row): string | null => {
+    try {
+      return (JSON.parse(r.details ?? "{}") as { storyIssue?: string }).storyIssue ?? null;
+    } catch {
+      return null;
+    }
+  };
+  const allLive = results.filter((r) => r.kind === "live" && r.score !== null);
+  // A draft for a story without acceptance criteria says something about the story, not the model.
+  const live = allLive.filter((r) => !storyIssueOf(r));
+  const recent: LiveDraft[] = allLive.slice(0, 10).map((r) => ({
     storyKey: r.story_key ?? "",
     score: r.score ?? 0,
     summary: r.summary ?? "",
+    storyIssue: storyIssueOf(r),
     promptVersion: r.prompt_version,
     at: r.created_at,
   }));
@@ -109,6 +119,7 @@ export async function aiQuality(db: D1Database): Promise<AiQualityResponse> {
     live: {
       count: live.length,
       average: live.length ? Math.round((live.reduce((a, r) => a + (r.score ?? 0), 0) / live.length) * 10) / 10 : null,
+      storyIssues: allLive.length - live.length,
       recent,
     },
     automation: (["claude", "local"] as const).map(

@@ -264,6 +264,8 @@ export interface LiveDraft {
   storyKey: string;
   score: number;
   summary: string;
+  /** Set when the story was the problem (e.g. no acceptance criteria); such drafts are left out of the average. */
+  storyIssue: string | null;
   promptVersion: string | null;
   at: string;
 }
@@ -279,7 +281,8 @@ export interface EngineStats {
 
 export interface AiQualityResponse {
   golden: { latest: GoldenRun | null; trend: { at: string; mean: number; model: string; promptVersion: string }[] };
-  live: { count: number; average: number | null; recent: LiveDraft[] };
+  /** count and average cover only drafts of well-formed stories; storyIssues counts the rest. */
+  live: { count: number; average: number | null; storyIssues: number; recent: LiveDraft[] };
   automation: EngineStats[];
 }
 

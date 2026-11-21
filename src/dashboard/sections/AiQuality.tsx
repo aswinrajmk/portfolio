@@ -55,7 +55,9 @@ function Tiles({ data }: { data: AiQualityResponse }) {
     {
       label: "Live drafts scored",
       value: String(data.live.count),
-      detail: data.live.average === null ? "none in 90 days" : `average ${pct(data.live.average)}`,
+      detail:
+        (data.live.average === null ? "none in 90 days" : `average ${pct(data.live.average)}`) +
+        (data.live.storyIssues ? ` · ${data.live.storyIssues} left out: story had no acceptance criteria` : ""),
     },
   ];
   return (
@@ -139,7 +141,7 @@ function Recent({ data }: { data: AiQualityResponse }) {
           {data.live.recent.map((d) => (
             <tr key={`${d.storyKey}${d.at}`}>
               <th scope="row">{d.storyKey}</th>
-              <td className="num">{pct(d.score)}</td>
+              <td className="num">{d.storyIssue ? <span title={d.storyIssue}>story issue</span> : pct(d.score)}</td>
               <td>{d.summary}</td>
             </tr>
           ))}
