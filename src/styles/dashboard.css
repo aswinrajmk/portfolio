@@ -702,3 +702,87 @@
   font-weight: 600;
   padding-bottom: var(--space-2);
 }
+
+/* Dashboard tabs */
+.tabs {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 5;
+  display: flex;
+  gap: var(--space-2);
+  margin: var(--space-6) 0 0;
+  overflow-x: auto;
+  background: var(--bg);
+  border-bottom: 1px solid var(--rule);
+  scrollbar-width: none;
+}
+.tabs__tab {
+  flex: none;
+  padding: var(--space-3) var(--space-4);
+  color: var(--muted);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+.tabs__tab:hover {
+  color: var(--ink);
+}
+.tabs__tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+.tabs__tab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.section__more {
+  margin-top: var(--space-4);
+}
+.link-button {
+  margin-top: var(--space-3);
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.agent__more {
+  margin-top: var(--space-5);
+}
+.agent__more > summary {
+  cursor: pointer;
+  list-style-position: outside;
+}
+.agent__more > summary .agent__subhead {
+  display: inline;
+}
+
+/* Sections reached by link land below the sticky header and tab bar. */
+.tabs__panel .section {
+  scroll-margin-top: calc(var(--header-h) + 3.5rem);
+}
+
+/* A compact page head on the dashboard, so the Overview tab's verdict and KPIs sit in the first screen. */
+.shell--dashboard .page-intro {
+  padding-top: var(--space-6);
+}
+.shell--dashboard .page-intro h1 {
+  font-size: var(--step-3);
+  margin-bottom: var(--space-3);
+}
+.shell--dashboard .page-intro .lede {
+  font-size: var(--step-0, 1rem);
+}
+.tabs {
+  margin-top: var(--space-5);
+}
+/* The tab bar already separates the panel from the intro, so its first section needs no rule above it. */
+.tabs__panel > .section:first-child {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: var(--space-5);
+}

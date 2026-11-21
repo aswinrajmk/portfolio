@@ -24,25 +24,33 @@ export function JiraAgent({ index }: { index: number }) {
       <PipelineDiagram className="diagram diagram--wide" columns={4} stages={stages} title={DIAGRAM_TITLE} />
       <PipelineDiagram className="diagram diagram--narrow" columns={1} stages={stages} title={DIAGRAM_TITLE} />
 
-      <h3 className="agent__subhead">Step by step</h3>
-      <ol className="agent-steps">
-        {steps.map((step) => (
-          <li key={step.title} className="agent-steps__item">
-            <h4>{step.title}</h4>
-            <p>{step.body}</p>
-          </li>
-        ))}
-      </ol>
+      <details className="agent__more">
+        <summary>
+          <h3 className="agent__subhead">Step by step ({steps.length} steps)</h3>
+        </summary>
+        <ol className="agent-steps">
+          {steps.map((step) => (
+            <li key={step.title} className="agent-steps__item">
+              <h4>{step.title}</h4>
+              <p>{step.body}</p>
+            </li>
+          ))}
+        </ol>
+      </details>
 
-      <h3 className="agent__subhead">Tools and skills used</h3>
-      <dl className="agent-tools">
-        {tools.map((tool) => (
-          <div key={tool.name} className="agent-tools__item">
-            <dt>{tool.name}</dt>
-            <dd>{tool.detail}</dd>
-          </div>
-        ))}
-      </dl>
+      <details className="agent__more">
+        <summary>
+          <h3 className="agent__subhead">Tools and skills used ({tools.length})</h3>
+        </summary>
+        <dl className="agent-tools">
+          {tools.map((tool) => (
+            <div key={tool.name} className="agent-tools__item">
+              <dt>{tool.name}</dt>
+              <dd>{tool.detail}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
 
       <h3 className="agent__subhead">From a real run</h3>
       <article className="agent-example" aria-label="Example from a real run">

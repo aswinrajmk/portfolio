@@ -17,7 +17,8 @@ async function load(): Promise<Snapshot> {
 // While a run is in progress the strip refreshes every 3 seconds; otherwise every 30.
 const nextDelay = (s: Snapshot) => (s.latest.data.status === "running" ? 3_000 : 30_000);
 
-export function RunStrip({ index }: { index: number }) {
+/** compact: the Overview tab shows the latest run only, without the recent-runs table. */
+export function RunStrip({ index, compact = false }: { index: number; compact?: boolean }) {
   const snapshot = usePolled(load, nextDelay);
   const isSample = snapshot?.latest.source === "sample";
 
@@ -36,7 +37,7 @@ export function RunStrip({ index }: { index: number }) {
       {snapshot ? (
         <>
           <RunDetails run={snapshot.latest.data} source={snapshot.latest.source} />
-          {!isSample && snapshot.recent.length > 1 && <RecentRuns runs={snapshot.recent} />}
+          {!compact && !isSample && snapshot.recent.length > 1 && <RecentRuns runs={snapshot.recent} />}
         </>
       ) : (
         <p className="note">Loading the latest run…</p>
