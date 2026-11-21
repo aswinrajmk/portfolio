@@ -7,6 +7,7 @@ const file = ".dev.vars";
 const STUB = "http://localhost:4199";
 const defaults = {
   RESULTS_API_TOKEN: randomBytes(16).toString("hex"),
+  AI_EVALS_TOKEN: randomBytes(16).toString("hex"),
   TELEGRAM_BOT_TOKEN: "local-test-bot-token",
   TELEGRAM_WEBHOOK_SECRET: "local-test-webhook-secret",
   TELEGRAM_ALLOWED_USER_ID: "4242",

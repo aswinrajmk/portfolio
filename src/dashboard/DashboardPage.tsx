@@ -1,4 +1,5 @@
 import { Layout } from "../shared/Layout";
+import { AiQuality } from "./sections/AiQuality";
 import { Decisions } from "./sections/Decisions";
 import { Evidence } from "./sections/Evidence";
 import { JiraAgent } from "./sections/JiraAgent";
@@ -27,6 +28,7 @@ const TABS: TabDef[] = [
     sections: [
       { id: "metrics", title: "Quality metrics and release readiness" },
       { id: "requirements", title: "Requirements coverage" },
+      { id: "ai-quality", title: "AI quality" },
     ],
   },
   {
@@ -56,6 +58,7 @@ function Panel({ tab }: { tab: string }) {
         <>
           <Metrics index={1} />
           <Requirements index={2} />
+          <AiQuality index={3} />
         </>
       );
     case "ai-workflow":

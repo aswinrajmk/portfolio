@@ -7,6 +7,10 @@ export interface Sourced<T> {
 }
 
 export type {
+  AiQualityResponse,
+  EngineStats,
+  GoldenRun,
+  LiveDraft,
   Coverage,
   FlakyTest,
   Healing,
