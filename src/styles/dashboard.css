@@ -382,7 +382,7 @@
   font-weight: 400;
 }
 
-/* Jira to test cases: local AI agent */
+/* Jira to automated tests: AI agents with approvals */
 .agent__subhead {
   margin: var(--space-6) 0 var(--space-3);
 }

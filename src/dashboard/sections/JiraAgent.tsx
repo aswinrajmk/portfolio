@@ -3,7 +3,7 @@ import { Section } from "../../shared/Layout";
 import { StatusBadge } from "../../shared/StatusBadge";
 import { PipelineDiagram } from "../PipelineDiagram";
 
-const DIAGRAM_TITLE = "Flow from a new Jira story to approved, linked Jira Test issues";
+const DIAGRAM_TITLE = "Flow from a new Jira story to approved Jira Test issues and automated Playwright tests";
 
 export function JiraAgent({ index }: { index: number }) {
   const { stages, steps, tools, example, source } = jiraAgent;
@@ -11,14 +11,15 @@ export function JiraAgent({ index }: { index: number }) {
     <Section
       id="jira-agent"
       index={index}
-      title="Jira to test cases: local AI agent"
+      title="Jira to automated tests: AI agents with approvals"
       aside={<StatusBadge status="live" />}
     >
       <p className="lede">
         When a new story is created in Jira, a self-hosted n8n workflow picks it up. A local AI agent (Ollama running
-        Qwen) reviews the requirement and drafts a minimal set of test cases. I approve each step in Telegram, and the
-        approved cases are created as Jira Test issues linked back to the story. The model runs on my own machine, so no
-        story text goes to a cloud AI service.
+        Qwen) reviews the requirement and drafts a minimal set of test cases, which become Jira Test issues linked to
+        the story. When I label a case smoke or regression, Claude Code (or, without a subscription, the local model)
+        writes the Playwright test for it in a pull request. I approve every step in Telegram. Analysis and test design
+        stay on my own machine. Only the Claude option sends the story and its approved cases to a cloud AI.
       </p>
       <PipelineDiagram className="diagram diagram--wide" columns={4} stages={stages} title={DIAGRAM_TITLE} />
       <PipelineDiagram className="diagram diagram--narrow" columns={1} stages={stages} title={DIAGRAM_TITLE} />
@@ -66,6 +67,10 @@ export function JiraAgent({ index }: { index: number }) {
           </dd>
           <dt>Why the approvals matter</dt>
           <dd>{example.review}</dd>
+          <dt>Automated</dt>
+          <dd>
+            {example.automated} <a href={example.automatedLink.href}>{example.automatedLink.label}</a>
+          </dd>
         </dl>
       </article>
       <p className="agent__source">
