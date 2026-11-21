@@ -46,7 +46,7 @@ export interface RunStartInput {
   commitSha?: string;
   commitMessage?: string;
   ciRunUrl?: string;
-  /** Playwright --grep pattern when only part of the suite ran, for example "@REQ-3". */
+  /** Playwright --grep pattern when only part of the suite ran, for example "@KAN-10". */
   filter?: string;
 }
 
@@ -59,7 +59,7 @@ export interface TestResultInput {
   steps?: TestStep[];
   healing?: Healing;
   logs?: string[];
-  /** Playwright tags, for example ["@REQ-1", "@smoke"]. */
+  /** Playwright tags, for example ["@KAN-10", "@KAN-11", "@smoke"]. */
   tags?: string[];
   /** Base64-encoded JPEG, at most LIMITS.screenshotBytes once decoded. */
   screenshot?: string;
@@ -110,10 +110,19 @@ export interface RunDetail extends RunSummary {
   tests: TestResult[];
 }
 
-// ---------- Requirements (GitHub issues labelled "requirement" in the app repo) ----------
+// ---------- Requirements (Jira stories in project KAN) ----------
 
-/** Matches a requirement tag and captures the issue number. */
-export const REQUIREMENT_TAG = /^@REQ-(\d+)$/;
+/**
+ * Matches a Jira key tag such as "@KAN-6" and captures the key. qa-tests tags the story on the describe block
+ * and the Test issue on the test, and Playwright lists inherited tags first, so a test's first Jira tag is its story.
+ */
+export const JIRA_TAG = /^@(KAN-\d+)$/;
+
+/**
+ * Runs with one of these filters cover the whole suite, so they decide which tests still exist (see
+ * requirementResults). An unfiltered run counts too.
+ */
+export const FULL_SUITE_FILTERS = ["@smoke|@regression"] as const;
 
 /** The latest result of one test linked to a requirement. */
 export interface RequirementTest {
@@ -131,10 +140,11 @@ export interface RequirementTest {
 export type RequirementState = "untested" | "failing" | "passing";
 
 export interface Requirement {
-  number: number;
+  /** Jira story key, for example "KAN-6". */
+  key: string;
   title: string;
   url: string | null;
-  /** GitHub issue state. Null when the issue could not be read (the tag still shows). */
+  /** "closed" when the story is in Jira's Done category. Null when the story could not be read (the tag still shows). */
   issueState: "open" | "closed" | null;
   state: RequirementState;
   tests: RequirementTest[];
@@ -142,7 +152,7 @@ export interface Requirement {
 
 export interface RequirementsResponse {
   requirements: Requirement[];
-  /** False when GitHub could not be reached, so titles may be missing. */
+  /** False when Jira could not be reached, so titles may be missing. */
   issuesLoaded: boolean;
 }
 

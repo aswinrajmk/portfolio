@@ -38,12 +38,12 @@ const HELP = [
   "• Rename the sign-in button to Log in (wealthlite)",
   "• Update the copy test to expect Log in (qa-tests)",
   "• Which requirements are failing?",
-  "• Run the tests for requirement 3",
+  "• Run the tests for story KAN-10",
   "• Merge wealthlite PR 12",
   "",
   "<b>Shortcuts</b> (work without AI credit):",
   "/latest · /runs · /reqs (requirement coverage)",
-  "/run [filter], e.g. /run @REQ-3 or /run login",
+  "/run [filter], e.g. /run @KAN-10, /run @smoke or /run login",
   "/merge &lt;repo&gt; &lt;number&gt;, e.g. /merge qa-tests 12",
   "/pending · /reset · /help",
   "",
@@ -203,13 +203,13 @@ async function onText(env: Env, cfg: BotConfig, telegram: Telegram, chatId: stri
           : q.state === "failing"
             ? `${failing} of ${q.tests.length} tests failing`
             : `${q.tests.length} tests passing`;
-      const title = q.title ? esc(q.title) : "(issue not found)";
-      const link = q.url ? `<a href="${esc(q.url)}">#${q.number}</a>` : `#${q.number}`;
-      return `${REQ_ICON[q.state]} ${link} ${title}: ${detail}${q.issueState === "closed" ? " (closed)" : ""}`;
+      const title = q.title ? esc(q.title) : "(story not found)";
+      const link = q.url ? `<a href="${esc(q.url)}">${q.key}</a>` : q.key;
+      return `${REQ_ICON[q.state]} ${link} ${title}: ${detail}${q.issueState === "closed" ? " (done)" : ""}`;
     });
     const body = [
-      lines.length ? lines.join("\n") : "No requirements yet. Open a wealthlite issue with the requirement label.",
-      issuesLoaded ? "" : "\n⚠️ GitHub could not be reached, so titles may be missing.",
+      lines.length ? lines.join("\n") : "No stories yet. Create a Story in Jira project KAN.",
+      issuesLoaded ? "" : "\n⚠️ Jira could not be reached, so titles may be missing.",
       `\n<a href="${cfg.publicUrl}/dashboard/#requirements">Open the coverage matrix</a>`,
     ].join("");
     return void (await telegram.sendMessage(chatId, body));
@@ -250,7 +250,8 @@ async function onText(env: Env, cfg: BotConfig, telegram: Telegram, chatId: stri
 
 interface BotEvent {
   kind?: unknown;
-  issue?: unknown;
+  story?: unknown;
+  tests?: unknown;
   title?: unknown;
   passed?: unknown;
   failed?: unknown;
@@ -326,12 +327,16 @@ export async function handleBotEvent(request: Request, env: Env): Promise<Respon
 }
 
 /**
- * A requirement issue changed and qa-tests drafted or updated its tests (requirement.yml in qa-tests).
+ * Test issues of a Jira story were labelled for a suite and qa-tests automated them (automate-from-jira.yml).
  * There is no chat request behind it, so the message goes to the owner's private chat.
  */
 async function requirementEvent(env: Env, cfg: BotConfig, event: BotEvent): Promise<Response> {
-  const issue = typeof event.issue === "number" && Number.isInteger(event.issue) ? event.issue : null;
-  if (!issue) return json({ error: "invalid_body", message: "issue must be a number" }, 400);
+  const story = typeof event.story === "string" && /^KAN-\d{1,6}$/.test(event.story) ? event.story : null;
+  if (!story) return json({ error: "invalid_body", message: "story must be a Jira key like KAN-6" }, 400);
+  const tests =
+    typeof event.tests === "string" && /^(KAN-\d{1,6})(,KAN-\d{1,6})*$/.test(event.tests)
+      ? `\nTest issues: ${event.tests.split(",").join(", ")}`
+      : "";
   const title = typeof event.title === "string" ? event.title.slice(0, 200) : "";
   const summary = typeof event.summary === "string" ? event.summary.slice(0, 1500) : "";
   const runLink = typeof event.run_url === "string" ? ` (<a href="${esc(event.run_url)}">log</a>)` : "";
@@ -339,7 +344,7 @@ async function requirementEvent(env: Env, cfg: BotConfig, event: BotEvent): Prom
     typeof event.passed === "number" && typeof event.failed === "number"
       ? `Against live wealthlite: ${event.passed} passed · ${event.failed} failed.`
       : "";
-  const head = `📋 <b>Requirement #${issue}</b>${title ? `: ${esc(title)}` : ""}`;
+  const head = `📋 <b>Story ${story}</b>${title ? `: ${esc(title)}` : ""}${tests}`;
   const telegram = new Telegram(cfg.botToken, cfg.telegramApi);
   const chatId = cfg.allowedUserId;
 
@@ -348,10 +353,10 @@ async function requirementEvent(env: Env, cfg: BotConfig, event: BotEvent): Prom
     typeof event.pr_number === "number" &&
     typeof event.pr_url === "string"
   ) {
-    const verb = event.status === "pr_opened" ? "Tests drafted in" : "Tests updated in";
+    const verb = event.status === "pr_opened" ? "Tests automated in" : "Tests updated in";
     const failingNote =
       typeof event.failed === "number" && event.failed > 0
-        ? "\nFailing tests are expected until wealthlite implements the requirement."
+        ? "\nFailing tests are expected until wealthlite implements the story."
         : "";
     await telegram.sendMessage(
       chatId,
@@ -361,12 +366,12 @@ async function requirementEvent(env: Env, cfg: BotConfig, event: BotEvent): Prom
       env.DB,
       chatId,
       "assistant",
-      `Requirement #${issue} (${title}): tests in qa-tests PR #${event.pr_number} (${event.pr_url}). ${counts}`,
+      `Story ${story} (${title}): tests in qa-tests PR #${event.pr_number} (${event.pr_url}). ${counts}`,
     );
   } else if (event.status === "no_changes") {
     await telegram.sendMessage(chatId, `${head}\nNo test changes were needed${runLink}. ${esc(summary)}`);
   } else {
-    await telegram.sendMessage(chatId, `${head}\n⚠️ Drafting tests failed${runLink}. ${esc(summary)}`);
+    await telegram.sendMessage(chatId, `${head}\n⚠️ Automating the tests failed${runLink}. ${esc(summary)}`);
   }
   return json({ ok: true });
 }

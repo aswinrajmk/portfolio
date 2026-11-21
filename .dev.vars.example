@@ -12,4 +12,8 @@ BOT_EVENTS_TOKEN=local-test-events-token
 TELEGRAM_API_BASE=http://localhost:4199
 GITHUB_API_BASE=http://localhost:4199
 ANTHROPIC_BASE_URL=http://localhost:4199
+# Requirements coverage reads Jira stories. Production sets JIRA_SITE, JIRA_EMAIL and JIRA_TOKEN as secrets.
+JIRA_API_BASE=http://localhost:4199
+JIRA_EMAIL=local-test@example.com
+JIRA_TOKEN=local-test-jira-token
 # ENVIRONMENT=preview   # uncomment to see the noindex header locally

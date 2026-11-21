@@ -17,6 +17,9 @@ const defaults = {
   TELEGRAM_API_BASE: STUB,
   GITHUB_API_BASE: STUB,
   ANTHROPIC_BASE_URL: STUB,
+  JIRA_API_BASE: STUB,
+  JIRA_EMAIL: "local-test@example.com",
+  JIRA_TOKEN: "local-test-jira-token",
 };
 
 let current = existsSync(file) ? readFileSync(file, "utf8") : "";

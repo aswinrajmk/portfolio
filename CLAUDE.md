@@ -75,8 +75,10 @@ Finished runs are posted to a Telegram channel with the first failure screenshot
 Requirements are wealthlite issues labelled `requirement` (#1–#4 seeded from existing behaviour). Editing one
 triggers qa-tests `requirement.yml`: Claude Code drafts `@REQ-<n>` tests, runs them against live WealthLite,
 opens a PR and reports counts to Telegram. The dashboard's requirements matrix (`GET /api/requirements`) shows
-each requirement with its linked tests' latest results. n8n was rejected for this GitHub flow, because it
-would duplicate GitHub Actions and the bot. It is used for the separate Jira flow below.
+each requirement with its linked tests' latest results.
+**Superseded 2026-11-21:** Jira is now the only requirements source. GitHub requirement issues and both
+`requirement.yml` workflows are retired, REQ-1..4 became KAN-10/17/19/23 with Test issues KAN-11..25, and the
+matrix reads Jira stories (see README "Requirements coverage").
 
 ## Jira story → test cases (2026-11-20, lives in wealthlite `automation/n8n/`)
 A self-hosted n8n workflow (`npx n8n` on Aswin's Mac) checks the WealthLite Jira project (`KAN`, Jira Free)

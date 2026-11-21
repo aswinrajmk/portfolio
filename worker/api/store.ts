@@ -1,6 +1,7 @@
 import {
   LIMITS,
-  REQUIREMENT_TAG,
+  FULL_SUITE_FILTERS,
+  JIRA_TAG,
   type RequirementTest,
   type RunCounts,
   type RunDetail,
@@ -214,24 +215,25 @@ export async function getScreenshot(db: D1Database, testId: string): Promise<Arr
 }
 
 /**
- * The latest result of every test tagged with a requirement (@REQ-n), grouped by requirement number.
- * Only finished runs count, so a run in progress never flips a requirement's state halfway. Results older
- * than the latest full (unfiltered) run with tagged tests are ignored, so renamed or deleted tests drop out.
+ * The latest result of every test tagged with a Jira story (@KAN-n), grouped by story key.
+ * Only finished runs count, so a run in progress never flips a story's state halfway. Results older than the
+ * latest full-suite run with tagged tests are ignored, so renamed or deleted tests drop out.
  */
-export async function requirementResults(db: D1Database, project: string): Promise<Map<number, RequirementTest[]>> {
+export async function requirementResults(db: D1Database, project: string): Promise<Map<string, RequirementTest[]>> {
+  const fullFilters = FULL_SUITE_FILTERS.map((_, i) => `?${i + 2}`).join(", ");
   const { results } = await db
     .prepare(
       `SELECT t.title, t.file, t.status, t.tags, t.run_id, r.started_at
        FROM test_results t JOIN runs r ON r.id = t.run_id
-       WHERE r.project = ?1 AND r.status != 'running' AND t.tags LIKE '%"@REQ-%'
+       WHERE r.project = ?1 AND r.status != 'running' AND t.tags LIKE '%"@KAN-%'
          AND r.started_at >= COALESCE(
            (SELECT MAX(r2.started_at) FROM runs r2
-            WHERE r2.project = ?1 AND r2.status != 'running' AND r2.filter IS NULL
-              AND EXISTS (SELECT 1 FROM test_results t2 WHERE t2.run_id = r2.id AND t2.tags LIKE '%"@REQ-%')), '')
+            WHERE r2.project = ?1 AND r2.status != 'running' AND (r2.filter IS NULL OR r2.filter IN (${fullFilters}))
+              AND EXISTS (SELECT 1 FROM test_results t2 WHERE t2.run_id = r2.id AND t2.tags LIKE '%"@KAN-%')), '')
        ORDER BY r.started_at DESC, t.seq
        LIMIT 2000`,
     )
-    .bind(project)
+    .bind(project, ...FULL_SUITE_FILTERS)
     .all<{
       title: string;
       file: string;
@@ -241,21 +243,21 @@ export async function requirementResults(db: D1Database, project: string): Promi
       started_at: string;
     }>();
 
-  const byRequirement = new Map<number, RequirementTest[]>();
+  const byStory = new Map<string, RequirementTest[]>();
   const seen = new Set<string>();
   for (const row of results) {
     // Rows are newest first, so the first time a test appears is its latest result.
-    const key = `${row.file}::${row.title}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    for (const tag of parseJson<string[]>(row.tags, [])) {
-      const match = REQUIREMENT_TAG.exec(tag);
-      if (!match) continue;
-      const number = Number(match[1]);
-      const list = byRequirement.get(number) ?? [];
-      list.push({ title: row.title, file: row.file, status: row.status, runId: row.run_id, ranAt: row.started_at });
-      byRequirement.set(number, list);
-    }
+    const id = `${row.file}::${row.title}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    // The first Jira tag is the story (describe tags come first); later ones are Test issues.
+    const story = parseJson<string[]>(row.tags, [])
+      .map((tag) => JIRA_TAG.exec(tag)?.[1])
+      .find(Boolean);
+    if (!story) continue;
+    const list = byStory.get(story) ?? [];
+    list.push({ title: row.title, file: row.file, status: row.status, runId: row.run_id, ranAt: row.started_at });
+    byStory.set(story, list);
   }
-  return byRequirement;
+  return byStory;
 }

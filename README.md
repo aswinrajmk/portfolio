@@ -62,7 +62,7 @@ The Worker serves the API under `/api/*`, backed by D1 (`portfolio-results`; PR 
 | `GET /api/runs?project=&limit=`             | none                                        | Recent runs (the limit is capped at 50)                     |
 | `GET /api/runs/latest`, `GET /api/runs/:id` | none                                        | Run summary, or a run with its tests                        |
 | `GET /api/results/:id/screenshot`           | none                                        | Failure screenshot (`image/jpeg`)                           |
-| `GET /api/requirements`                     | none                                        | wealthlite requirement issues with linked tests and results |
+| `GET /api/requirements`                     | none                                        | Jira stories (KAN) with linked tests and results            |
 | `GET /api/health`                           | none                                        | `{ ok, environment }`                                       |
 
 `RESULTS_API_TOKEN` is a GitHub secret here, and CI copies it to the Worker on every deploy. The
@@ -170,19 +170,19 @@ A private Telegram bot, served by this Worker at `POST /telegram/webhook`, gives
 - **Merge or close PRs and start QA runs.** Each one needs YES. Merging is refused until every check passes.
   PRs that touch `.github/`, wrangler config, migrations or `package.json` need **MERGE ANYWAY**.
 - **Run reports:** every finished run is posted to a Telegram channel, with the first failure screenshot.
-- **Requirements:** when a wealthlite requirement issue changes, qa-tests drafts tests for it and the bot
-  sends the PR with pass/fail counts. `/reqs` (or "which requirements are failing?") shows coverage, and
-  `/run @REQ-3` runs only that requirement's tests.
+- **Requirements:** `/reqs` (or "which requirements are failing?") shows coverage per Jira story, and
+  `/run @KAN-10` runs only that story's tests (`/run @smoke` runs a suite).
 
 ## Requirements coverage
 
-Requirements are wealthlite issues labelled `requirement`; tests link to them with tags like `@REQ-3`, which
-the qa-tests reporter sends with each result (`tags` on a result, `filter` on a partial run; migration
-`0003`). `GET /api/requirements` joins the issues (read from GitHub, cached 5 minutes per isolate) with each
-tagged test's latest result, and the dashboard shows it as a matrix. Results older than the latest full run
-with tagged tests are ignored, so renamed tests drop out. Flow: issue changed → wealthlite `requirement.yml` →
-qa-tests `requirement.yml` (Claude Code drafts tests, runs them, opens a PR) → Telegram → merge → next run
-fills the matrix.
+Requirements are Jira stories in project `KAN`. Each qa-tests test is tagged with its story on the describe
+block and its Jira Test issue on the test (`@KAN-10`, `@KAN-11`), and the reporter sends the tags with each
+result (`tags` on a result, `filter` on a partial run; migration `0003`). `GET /api/requirements` joins the
+stories (Jira search API, cached 5 minutes per isolate) with each test's latest result, grouped by its first
+Jira tag, which is always the story because Playwright lists inherited tags first. Results older than the
+latest full-suite run (unfiltered, or `@smoke|@regression`) are ignored, so renamed tests drop out. Worker
+secrets `JIRA_SITE`, `JIRA_EMAIL` and `JIRA_TOKEN` (read-only use) are needed. Without them the matrix still
+lists tagged tests, with no titles.
 
 Safety:
 

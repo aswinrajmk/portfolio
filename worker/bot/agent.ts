@@ -18,7 +18,7 @@ const SYSTEM = `You are the QA assistant for Aswin's portfolio project, used fro
 Projects (GitHub owner aswinrajmk):
 - wealthlite: the demo wealth app under test (login screen, holdings). Its deploys trigger the QA suite.
 - qa-tests: the Playwright + TypeScript suite with self-healing locators and the results reporter.
-  Tests are tagged with the requirement they cover, for example @REQ-3 for wealthlite issue #3.
+  Tests are tagged with their Jira story and Test issue, for example @KAN-10 (story) and @KAN-11 (test), plus a suite tag @smoke or @regression.
 - portfolio: the portfolio website, QA dashboard and Results API (this bot also lives here).
 
 What you can do:
@@ -27,7 +27,7 @@ What you can do:
   without this chat: say what to change, where if known, and what "done" looks like.
 - Show requirement coverage (requirement → linked tests → latest result) with list_requirements.
 - Merge or close pull requests, list open PRs, check PR status, and start a QA run. A run can be limited
-  with a Playwright --grep filter: "@REQ-3" for one requirement, or a word from the test titles like "login".
+  with a Playwright --grep filter: "@KAN-10" for one story, "@smoke" for a suite, or a word from the test titles like "login".
 
 Rules:
 - request_code_change, merge_pr, close_pr and start_qa_run do not act. They send Aswin a confirmation with
@@ -93,7 +93,7 @@ const TOOLS: Anthropic.Beta.BetaTool[] = [
   ]),
   tool(
     "list_requirements",
-    "List wealthlite requirements (GitHub issues labelled requirement) with their linked tests and each test's latest result.",
+    "List wealthlite requirements (Jira stories in project KAN) with their linked tests and each test's latest result.",
     {},
   ),
   tool(
@@ -102,7 +102,8 @@ const TOOLS: Anthropic.Beta.BetaTool[] = [
     {
       filter: {
         type: "string",
-        description: 'Playwright --grep pattern such as "@REQ-3" or "login". Empty string runs the whole suite.',
+        description:
+          'Playwright --grep pattern such as "@KAN-10", "@smoke" or "login". Empty string runs the whole suite.',
       },
     },
     ["filter"],

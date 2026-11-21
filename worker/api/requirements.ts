@@ -1,42 +1,59 @@
 import type { Requirement, RequirementsResponse, RequirementState, RequirementTest } from "../../shared/results";
 import { requirementResults } from "./store";
 
-// Requirements are GitHub issues labelled "requirement" in the app repo. Tests link to them with a tag
-// such as "@REQ-3". This joins the two so the dashboard can show requirement → tests → latest result.
+// Requirements are Jira stories in project KAN. qa-tests tags each test with its story ("@KAN-6") and its Jira
+// Test issue. This joins stories and results so the dashboard can show story → tests → latest result.
 
-interface Issue {
-  number: number;
+interface Story {
+  key: string;
   title: string;
-  html_url: string;
-  state: "open" | "closed";
-  pull_request?: unknown;
+  url: string;
+  done: boolean;
 }
 
-const ISSUE_CACHE_MS = 5 * 60 * 1000;
-// Per-isolate cache. The Cache API does nothing on workers.dev, and GitHub's limits are generous with a token.
-let cached: { at: number; issues: Issue[] } | null = null;
+interface JiraSearch {
+  issues: { key: string; fields: { summary: string; status?: { statusCategory?: { key?: string } } } }[];
+}
 
-async function requirementIssues(env: Env, repo: string): Promise<Issue[] | null> {
-  if (cached && Date.now() - cached.at < ISSUE_CACHE_MS) return cached.issues;
+const STORY_CACHE_MS = 5 * 60 * 1000;
+const JQL = "project = KAN AND issuetype = Story ORDER BY key ASC";
+// Per-isolate cache. The Cache API does nothing on workers.dev, and Jira's limits are generous for this.
+let cached: { at: number; stories: Story[] } | null = null;
+
+/** Jira base URL from JIRA_API_BASE (tests point it at the stub) or JIRA_SITE ("x.atlassian.net" or a URL). */
+function jiraBase(e: Record<string, string | undefined>): string | null {
+  const raw = e.JIRA_API_BASE || e.JIRA_SITE;
+  if (!raw) return null;
+  return (raw.startsWith("http") ? raw : `https://${raw}`).replace(/\/$/, "");
+}
+
+async function stories(env: Env): Promise<Story[] | null> {
+  if (cached && Date.now() - cached.at < STORY_CACHE_MS) return cached.stories;
   const e = env as unknown as Record<string, string | undefined>;
-  const api = (e.GITHUB_API_BASE || "https://api.github.com").replace(/\/$/, "");
-  const owner = e.GITHUB_OWNER || "aswinrajmk";
+  const base = jiraBase(e);
+  if (!base || !e.JIRA_EMAIL || !e.JIRA_TOKEN) {
+    console.warn("[requirements] JIRA_SITE, JIRA_EMAIL or JIRA_TOKEN is not set");
+    return null;
+  }
   try {
-    const response = await fetch(`${api}/repos/${owner}/${repo}/issues?labels=requirement&state=all&per_page=100`, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "portfolio-results-api",
-        ...(e.GITHUB_BOT_TOKEN ? { Authorization: `Bearer ${e.GITHUB_BOT_TOKEN}` } : {}),
-      },
+    const params = new URLSearchParams({ jql: JQL, fields: "summary,status", maxResults: "100" });
+    const response = await fetch(`${base}/rest/api/3/search/jql?${params}`, {
+      headers: { Accept: "application/json", Authorization: `Basic ${btoa(`${e.JIRA_EMAIL}:${e.JIRA_TOKEN}`)}` },
       signal: AbortSignal.timeout(5_000),
     });
-    if (!response.ok) throw new Error(`GitHub responded ${response.status}`);
-    const issues = ((await response.json()) as Issue[]).filter((i) => !i.pull_request);
-    cached = { at: Date.now(), issues };
-    return issues;
-  } catch (e) {
-    console.warn(`[requirements] could not read issues: ${String(e)}`);
-    return cached?.issues ?? null;
+    if (!response.ok) throw new Error(`Jira responded ${response.status}`);
+    const body = (await response.json()) as JiraSearch;
+    const list = body.issues.map((i) => ({
+      key: i.key,
+      title: i.fields.summary,
+      url: `${base}/browse/${i.key}`,
+      done: i.fields.status?.statusCategory?.key === "done",
+    }));
+    cached = { at: Date.now(), stories: list };
+    return list;
+  } catch (err) {
+    console.warn(`[requirements] could not read Jira stories: ${String(err)}`);
+    return cached?.stories ?? null;
   }
 }
 
@@ -45,27 +62,29 @@ function stateOf(tests: RequirementTest[]): RequirementState {
   return tests.some((t) => t.status === "failed") ? "failing" : "passing";
 }
 
+const keyNumber = (key: string) => Number(key.split("-")[1]);
+
 export async function listRequirements(env: Env, project: string): Promise<RequirementsResponse> {
-  const [issues, results] = await Promise.all([requirementIssues(env, project), requirementResults(env.DB, project)]);
-  const byNumber = new Map<number, Requirement>();
-  for (const issue of issues ?? []) {
-    const tests = results.get(issue.number) ?? [];
-    byNumber.set(issue.number, {
-      number: issue.number,
-      title: issue.title,
-      url: issue.html_url,
-      issueState: issue.state,
+  const [list, results] = await Promise.all([stories(env), requirementResults(env.DB, project)]);
+  const byKey = new Map<string, Requirement>();
+  for (const story of list ?? []) {
+    const tests = results.get(story.key) ?? [];
+    byKey.set(story.key, {
+      key: story.key,
+      title: story.title,
+      url: story.url,
+      issueState: story.done ? "closed" : "open",
       state: stateOf(tests),
       tests,
     });
   }
-  // Tags without a matching issue still show, so a missing or mistyped requirement is visible.
-  for (const [number, tests] of results) {
-    if (byNumber.has(number)) continue;
-    byNumber.set(number, { number, title: "", url: null, issueState: null, state: stateOf(tests), tests });
+  // Tags without a matching story still show, so a missing or mistyped story key is visible.
+  for (const [key, tests] of results) {
+    if (byKey.has(key)) continue;
+    byKey.set(key, { key, title: "", url: null, issueState: null, state: stateOf(tests), tests });
   }
   return {
-    requirements: [...byNumber.values()].sort((a, b) => a.number - b.number),
-    issuesLoaded: issues !== null,
+    requirements: [...byKey.values()].sort((a, b) => keyNumber(a.key) - keyNumber(b.key)),
+    issuesLoaded: list !== null,
   };
 }

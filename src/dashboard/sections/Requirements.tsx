@@ -12,9 +12,9 @@ export function Requirements({ index }: { index: number }) {
   return (
     <Section id="requirements" index={index} title="Requirements coverage">
       <p className="lede">
-        Each requirement is a GitHub issue in wealthlite. When I open or edit one, Claude Code drafts Playwright tests
-        for its acceptance criteria in a qa-tests pull request, tagged with the issue number. Once merged, every run
-        updates this matrix: requirement, linked tests, latest result.
+        Each requirement is a Jira story. Its approved test cases are Jira Test issues, and the ones I label smoke or
+        regression are automated in qa-tests, tagged with the story and Test issue keys. Every run updates this matrix:
+        story, linked tests, latest result.
       </p>
       {data === undefined ? (
         <p className="note">Loading requirements…</p>
@@ -24,29 +24,29 @@ export function Requirements({ index }: { index: number }) {
         <p className="note">
           {data.issuesLoaded
             ? "No requirements recorded yet."
-            : "GitHub could not be reached, so the requirements cannot be listed right now."}
+            : "Jira could not be reached, so the stories cannot be listed right now."}
         </p>
       ) : (
         <>
           {!data.issuesLoaded && (
-            <p className="note">GitHub could not be reached, so some requirement titles may be missing.</p>
+            <p className="note">Jira could not be reached, so some story titles may be missing.</p>
           )}
           <div className="table-wrap">
             <table className="matrix reqs">
               <thead>
                 <tr>
-                  <th scope="col">Requirement</th>
+                  <th scope="col">Story</th>
                   <th scope="col">Status</th>
                   <th scope="col">Linked tests (latest result)</th>
                 </tr>
               </thead>
               <tbody>
                 {data.requirements.map((req) => (
-                  <tr key={req.number} data-requirement={req.number}>
+                  <tr key={req.key} data-requirement={req.key}>
                     <th scope="row">
-                      {req.url ? <a href={req.url}>#{req.number}</a> : <span>#{req.number}</span>}{" "}
-                      {req.title || <span className="empty">Issue not found</span>}
-                      {req.issueState === "closed" && <span className="reqs__closed"> (closed)</span>}
+                      {req.url ? <a href={req.url}>{req.key}</a> : <span>{req.key}</span>}{" "}
+                      {req.title || <span className="empty">Story not found</span>}
+                      {req.issueState === "closed" && <span className="reqs__closed"> (done)</span>}
                     </th>
                     <td>
                       <RequirementStateBadge state={req.state} />

@@ -1,4 +1,4 @@
-// Local stand-in for the Telegram, GitHub and Anthropic APIs, used only by the bot tests.
+// Local stand-in for the Telegram, GitHub, Jira and Anthropic APIs, used only by the bot tests.
 // It records every request and replays scripted Anthropic responses, so tests never reach real services.
 import { createServer } from "node:http";
 
@@ -8,23 +8,16 @@ let anthropicQueue = [];
 let checkRuns = [{ name: "verify", status: "completed", conclusion: "success" }];
 let prFiles = [{ filename: "src/LoginPage.tsx" }];
 let anthropicError = null;
-// Requirement issues in wealthlite. The issues API also returns pull requests, which the Worker must skip.
-const ISSUES = [
-  {
-    number: 1,
-    title: "Sign in with email and password",
-    html_url: "https://github.com/aswinrajmk/wealthlite/issues/1",
-    state: "open",
-  },
-  { number: 2, title: "Sign out", html_url: "https://github.com/aswinrajmk/wealthlite/issues/2", state: "closed" },
-  {
-    number: 3,
-    title: "A pull request",
-    html_url: "https://github.com/aswinrajmk/wealthlite/pull/3",
-    state: "open",
-    pull_request: {},
-  },
-];
+// Jira stories in project KAN, as the search API returns them. KAN-2 is in the Done category.
+const JIRA_STORIES = {
+  issues: [
+    {
+      key: "KAN-1",
+      fields: { summary: "Sign in with email and password", status: { statusCategory: { key: "new" } } },
+    },
+    { key: "KAN-2", fields: { summary: "Sign out", status: { statusCategory: { key: "done" } } } },
+  ],
+};
 
 const send = (res, status, body) => {
   res.writeHead(status, { "Content-Type": "application/json" });
@@ -110,7 +103,7 @@ createServer(async (req, res) => {
       head: { sha: "abc123def456" },
     });
   }
-  if (/^\/repos\/[^/]+\/wealthlite\/issues$/.test(path)) return send(res, 200, ISSUES);
+  if (path === "/rest/api/3/search/jql") return send(res, 200, JIRA_STORIES);
   if (/\/commits\/[^/]+\/check-runs$/.test(path)) return send(res, 200, { check_runs: checkRuns });
   if (/\/pulls$/.test(path)) return send(res, 200, []);
 
